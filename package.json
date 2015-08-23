@@ -1,0 +1,20 @@
+{
+	"name": "Logging",
+	"description": "Logging module Node.js",
+	"version": "1.0.0",
+	"author": "Borislav Peev <borislav.asdf@gmail.com>",
+	"engine": [
+		"node >= 0.10"
+	],
+	"scripts": {
+		"test": "node ./tests/tests.js"
+	},
+	"devDependencies": {
+		"Unitest": "https://github.com/perennials/unitest-js/tarball/master",
+		"Prototype": "https://github.com/perennials/prototype-js/tarball/master"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/perennials/logging-node.git"
+	}
+}
