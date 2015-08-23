@@ -95,10 +95,22 @@ UnitestA( 'FileLog.waitRecords()', function ( test ) {
 				test( Fs.readFileSync( fn, { encoding: 'utf8' } ) == 'asd qwe' );
 			} );
 
+			// open one stream too and see if write is working and closing is properly waited for
+			log.openStream( function ( err, stream ) {
+				if ( stream ) {
+					stream.once( 'close', function () {
+						var fn = log.getStorageUri() + '/' + log.getLoggedRecords()[ 2 ];
+						test( Fs.readFileSync( fn, { encoding: 'utf8' } ) == 'qwe asd' );
+					} );
+					stream.end( 'qwe asd' );
+					stream.close();
+				}
+			} );
+
 			// check if the wait callback is working and clean everything
 			log.waitRecords( function () {
 				var records = log.getLoggedRecords();
-				test( records.length == 2 );
+				test( records.length == 3 );
 				for ( var i = records.length - 1; i >= 0; --i ) {
 					Fs.unlinkSync( log.getStorageUri() + '/' + records[ i ] );
 				}

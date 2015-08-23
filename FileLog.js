@@ -28,7 +28,9 @@ function FileLog ( storageUri, callback ) {
 				_this._dir += Path.sep;
 			}
 			if ( callback instanceof Function ) {
-				callback( err, _this );
+				process.nextTick( function () {
+					callback( err, _this );
+				} );
 			}
 		}
 		else {
@@ -43,7 +45,9 @@ function FileLog ( storageUri, callback ) {
 					_this._dir += Path.sep;
 				}
 				if ( callback instanceof Function ) {
-					callback( err, _this );
+					process.nextTick( function () {
+						callback( err, _this );
+					} );
 				}
 			} );
 		}
@@ -69,32 +73,41 @@ FileLog.extend( ILogEngine, {
 				_this._makeSessionId( fileName, callback, _num + 1 );
 			}
 			else {
-				callback( err, id )
+				process.nextTick( function () {
+					callback( err, id )
+				} );
 			}
 		} );
 	},
 
 	_writeQueue: function ( fileName, data, callback ) {
 		var _this = this;
+		var index = this._fileCount - 1;
 		this._queue[ fileName ] = true;
 
 		Fs.writeFile( this._dir + fileName, data, function ( err ) {
-			_this._loggedIds.push( fileName );
+			_this._loggedIds[ index ] = fileName;
 			delete _this._queue[ fileName ];
 			if ( callback instanceof Function ) {
-				callback( err );
+				process.nextTick( function () {
+					callback( err );
+				} );
 			}
 
-			if ( _this._notifyAfterLastWrite.length > 0 &&
-				 _this.getRecordsInProgress().length === 0 ) {
-				
-				var callbacks = _this._notifyAfterLastWrite;
-				for ( var i = 0, iend = callbacks.length; i < iend; ++i ) {
-					callbacks[ i ]();
-				}
-				_this._notifyAfterLastWrite = [];
-			}
+			_this._checkLastWrite();
 		} );
+	},
+
+	_checkLastWrite: function () {
+		if ( this._notifyAfterLastWrite.length > 0 &&
+			 this.getRecordsInProgress().length === 0 ) {
+			
+			var callbacks = this._notifyAfterLastWrite;
+			for ( var i = 0, iend = callbacks.length; i < iend; ++i ) {
+				process.nextTick( callbacks[ i ] );
+			}
+			this._notifyAfterLastWrite = [];
+		}
 	},
 
 	_makeRecordId: function ( props ) {
@@ -115,7 +128,9 @@ FileLog.extend( ILogEngine, {
 
 	waitRecords: function ( callback ) {
 		if ( this.getRecordsInProgress().length === 0 ) {
-			callback();
+			if ( callback instanceof Function ) {
+				process.nextTick( callback );
+			}
 		}
 		else {
 			this._notifyAfterLastWrite.push( callback );
@@ -160,7 +175,9 @@ FileLog.extend( ILogEngine, {
 
 			_this.write( props, [ 'RECORD_META', 'DATA_JSON' ], function ( err ) {
 				if ( callback instanceof Function ) {
-					callback( err, id );
+					process.nextTick( function () {
+						callback( err, id );
+					} );
 				}
 			} );
 
@@ -181,13 +198,15 @@ FileLog.extend( ILogEngine, {
 	
 	write: function ( data, props, callback ) {
 
-		props = ILogEngine.labelsToProps( props );
+		if ( props instanceof Function ) {
+			callback = props;
+			props = [ 'RECORD_GENERIC', String.isString( data ) ? 'DATA_TEXT' : 'DATA_JSON' ];
+		}
 
+		props = ILogEngine.labelsToProps( props );
 		var fileName = this._makeRecordId( props );
 
 		// handle known data types
-		//todo: this handling can be exported to shared function, but no need atm, we are the only user
-		//todo: handle HttpRequest, HttpResponse
 		if ( data instanceof Object &&
 			 props.DataType == ILogEngine.DATA_JSON.Value ) {
 			
@@ -196,6 +215,55 @@ FileLog.extend( ILogEngine, {
 
 		// write it
 		this._writeQueue( fileName, data, callback );
+	},
+
+	openStream: function ( props, callback ) {
+
+		if ( props instanceof Function ) {
+			callback = props;
+			props = [ 'RECORD_STREAM', 'DATA_TEXT' ];
+		}
+
+		props = ILogEngine.labelsToProps( props );
+		var fileName = this._makeRecordId( props );
+		var index = this._fileCount - 1;
+		var stream = Fs.createWriteStream( this._dir + fileName, { flags: 'w+' } );
+
+		var _this = this;
+		
+		// if error occurs before open call the callback, otherwise remove this listener in the open handler
+		var errListener = function ( err ) {
+			stream.removeListener( 'open', openListener );
+
+			if ( callback instanceof Function ) {
+				process.nextTick( function () {
+					callback( err, null );
+				} );
+			}
+		};
+
+		var openListener = function ( fd ) {
+			stream.removeListener( 'error', errListener );
+			
+			_this._queue[ fileName ] = true;
+
+			stream.once( 'close', function () {
+				_this._loggedIds[ index ] = fileName;
+				delete _this._queue[ fileName ];
+				
+				_this._checkLastWrite();
+			} );
+
+			if ( callback instanceof Function ) {
+				process.nextTick( function () {
+					callback( null, stream );
+				} );
+			}
+		};
+
+		stream.once( 'error', errListener );
+		stream.once( 'open', openListener );
+
 	},
 
 	getStorageUri: function () {

@@ -12,6 +12,7 @@ ILogEngine.define( {
 	getSessionId: function () {},
 	startSession: function ( parentId, props, callback ) {},
 	write: function ( data, props, callback ) {},
+	openStream: function ( props, callback ) {},
 	waitRecords: function ( callback ) {}
 } );
 
