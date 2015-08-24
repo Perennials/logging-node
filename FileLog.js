@@ -90,7 +90,7 @@ FileLog.extend( ILogEngine, {
 			delete _this._queue[ fileName ];
 			if ( callback instanceof Function ) {
 				process.nextTick( function () {
-					callback( err );
+					callback( err, fileName );
 				} );
 			}
 
@@ -207,7 +207,12 @@ FileLog.extend( ILogEngine, {
 		var fileName = this._makeRecordId( props );
 
 		// handle known data types
-		if ( data instanceof Object &&
+		if ( data instanceof Error &&
+		     props.DataType == ILogEngine.DATA_TEXT.Value ) {
+			
+			data = data.stack;
+		}
+		else if ( data instanceof Object &&
 			 props.DataType == ILogEngine.DATA_JSON.Value ) {
 			
 			data = JSON.stringify( data );
@@ -232,6 +237,7 @@ FileLog.extend( ILogEngine, {
 		var _this = this;
 		
 		// if error occurs before open call the callback, otherwise remove this listener in the open handler
+		// error event handler
 		var errListener = function ( err ) {
 			stream.removeListener( 'open', openListener );
 
@@ -242,12 +248,15 @@ FileLog.extend( ILogEngine, {
 			}
 		};
 
+		// open event handler
 		var openListener = function ( fd ) {
 			stream.removeListener( 'error', errListener );
 			
 			_this._queue[ fileName ] = true;
 
+			// close event handler
 			stream.once( 'close', function () {
+
 				_this._loggedIds[ index ] = fileName;
 				delete _this._queue[ fileName ];
 				
