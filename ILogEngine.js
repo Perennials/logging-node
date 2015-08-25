@@ -74,11 +74,6 @@ ILogEngine.defineStatic( {
 		Value: 'EXCEPTION'
 	},
 
-	RECORD_PROGRAM_RESULT: {
-		Name: 'RecordType',
-		Value: 'PROGRAM_RESULT'
-	},
-
 	RECORD_STREAM: {
 		Name: 'RecordType',
 		Value: 'STREAM'
@@ -92,6 +87,11 @@ ILogEngine.defineStatic( {
 	RECORD_SERVER_ENV: {
 		Name: 'RecordType',
 		Value: 'SERVER_ENV'
+	},
+
+	RECORD_SERVER_RESPONSE: {
+		Name: 'RecordType',
+		Value: 'SERVER_RESPONSE'
 	},
 	
 	// converts 'text/xml' to 'XML'
@@ -147,17 +147,31 @@ ILogEngine.defineStatic( {
 	},
 
 	// converts 'DATA_XML' to DataType: 'XML'
-	labelsToProps: function ( labels ) {
+	labelsToProps: function ( labels, applyDefaults ) {
 		var props = labels;
 		if ( labels instanceof Array ) {
 			props = {};
 			for ( var i = labels.length - 1; i >= 0; --i ) {
-				var prop = ILogEngine[ labels[ i ] ];
+				var label = labels[ i ];
+				var prop = ILogEngine[ label ];
 				if ( prop instanceof Object ) {
 					props[ prop.Name ] = prop.Value;
 				}
+				else {
+					props.Name = label;
+				}
 			}
 		}
+
+		if ( applyDefaults ) {
+			if ( props.RecordType === undefined ) {
+				props.RecordType = ILogEngine.RECORD_GENERIC.Value;
+			}
+			if ( props.DataType === undefined ) {
+				props.DataType = ILogEngine.DATA_BINARY.Value;
+			}
+		}
+
 		return props;
 	}
 } );

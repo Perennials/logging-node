@@ -147,12 +147,11 @@ FileLog.extend( ILogEngine, {
 
 		props = ILogEngine.labelsToProps( props );
 
-		var prefix = 'LogSession_';
-		var fileName = prefix + '{LogSession}';
+		var fileName = FileLog.LogSessionDirectoryFormat;
 
 		this._makeSessionId( fileName, function ( err, id ) {
 			if ( !err ) {
-				_this._dir += prefix + id + Path.sep;
+				_this._dir += FileLog.LogSessionDirectoryFormat.replace( '{LogSession}', id ) + Path.sep;
 				_this._sessionId = id;
 			}
 
@@ -165,10 +164,12 @@ FileLog.extend( ILogEngine, {
 			}
 
 			var meta = {
-				Api: 'logging-node-1.0',
+				Api: 'logging-node',
+				ApiVersion: '0.9',
 				LogSpecs: '0.9',
 				LogSession: id,
-				ParentSession: parentId
+				ParentSession: parentId,
+				TimeStamp: (new Date()).toISOString()
 			};
 
 			props.merge( meta );
@@ -203,7 +204,8 @@ FileLog.extend( ILogEngine, {
 			props = [ 'RECORD_GENERIC', String.isString( data ) ? 'DATA_TEXT' : 'DATA_JSON' ];
 		}
 
-		props = ILogEngine.labelsToProps( props );
+		props = ILogEngine.labelsToProps( props, true );
+
 		var fileName = this._makeRecordId( props );
 
 		// handle known data types
@@ -229,7 +231,8 @@ FileLog.extend( ILogEngine, {
 			props = [ 'RECORD_STREAM', 'DATA_TEXT' ];
 		}
 
-		props = ILogEngine.labelsToProps( props );
+		props = ILogEngine.labelsToProps( props, true );
+		
 		var fileName = this._makeRecordId( props );
 		var index = this._fileCount - 1;
 		var stream = Fs.createWriteStream( this._dir + fileName, { flags: 'w+' } );
@@ -282,6 +285,8 @@ FileLog.extend( ILogEngine, {
 } ).implement( ILogEngine );
 
 FileLog.defineStatic( {
+
+	LogSessionDirectoryFormat: /*'LogSession_' +*/ '{LogSession}',
 
 	_dataTypeToFileExt: function ( dataType, def ) {
 		return FileLog._dataLabelToFileExt( 'DATA_' + dataType, def );

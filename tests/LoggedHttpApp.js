@@ -2,16 +2,18 @@ var LoggedHttpApp = require( '../LoggedHttpApp' );
 var LoggedHttpAppRequest = require( '../LoggedHttpAppRequest' );
 var HttpRequest = require( 'Net/HttpRequest' );
 var Fs = require( 'fs' );
+var Helpers = require( './Helpers' );
 
 UnitestA( 'LoggedHttpAppRequest.onHttpContent', function ( test ) {
 
+	var logsDir = __dirname + '/testlogs';
+	
 	function TestAppRequest ( app, req, res ) {
 		LoggedHttpAppRequest.call( this, app, req, res );
 	}
 
 	TestAppRequest.extend( LoggedHttpAppRequest, {
 		onHttpContent: function ( content ) {
-			LoggedHttpAppRequest.prototype.onHttpContent.call( this, content );
 			test( this.Request.headers.someting === 'custom' );
 			test( content.toString() === 'asd.qwe' );
 			console.log( 'asd' );
@@ -23,9 +25,19 @@ UnitestA( 'LoggedHttpAppRequest.onHttpContent', function ( test ) {
 
 		onError: function ( err ) {
 			var _this = this;
-			this.Response.end();
+			this.Response.write( '123' );
+			this.Response.end( '456' );
 			this.Log.write( err, [ 'RECORD_EXCEPTION', 'DATA_TEXT' ], function ( err, id ) {
-				_this.App.onClose( function () {
+
+				test( !err );
+
+				// test we have a couple of streams
+
+				// test( Fs.existsSync(  ) )
+
+				_this.App.close( function () {
+					Helpers.removeLogSession( _this.Log );
+					Fs.rmdirSync( logsDir );
 					test.out();
 				} );
 			} );
@@ -34,11 +46,10 @@ UnitestA( 'LoggedHttpAppRequest.onHttpContent', function ( test ) {
 
 	var app1 = new LoggedHttpApp( TestAppRequest, '127.0.0.1', 55555 );
 	var cfg = app1.getConfig();
-	var logsDir = __dirname + '/testlogs';
 	cfg.merge( { storage: { log:  logsDir } } );
-	if ( !Fs.existsSync( logsDir ) ) {
-		Fs.mkdirSync( logsDir );
-	}
+	try { Fs.mkdirSync( logsDir ); }
+	catch ( e ) {}
+	test( Fs.existsSync( logsDir ) );
 	app1.startListening();
 	(new HttpRequest( 'http://127.0.0.1:55555' ))
 		.setHeader( 'someting', 'custom' )
@@ -82,7 +93,7 @@ UnitestA( 'LoggedHttpAppRequest.onHttpContent', function ( test ) {
 			if ( nerr === 1 ) {
 				test( err.message === '3' );
 				test( this.Request.content.toString() === '333' );
-				this.App.onClose( function () {
+				this.App.close( function () {
 					test.out();
 				} );
 			}

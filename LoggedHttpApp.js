@@ -4,23 +4,15 @@ var LoggedHttpAppRequest = require( './LoggedHttpAppRequest' );
 
 function LoggedHttpApp ( appRequest, host, port ) {
 	this._config = new Config();
-	this._ogStdoutWrite = null;
-	this._ogStdoutEnd = null;
-	this._ogStderrWrite = null;
-	this._ogStderrEnd = null;
 
 	// hijack stdout/stderr so all console.log() and similar can be intercepted
 	if ( process.stdout ) {
-		this._ogStdoutWrite = process.stdout.write;
-		this._ogStdoutEnd = process.stdout.end;
-		process.stdout.write = this._stdoutWrite.bind( this );
-		process.stdout.end = this._stdoutEnd.bind( this );
+		this._hookStreamCopierFn( process.stdout, 'write', 'Stdout' )
+		this._hookStreamCopierFn( process.stdout, 'end', 'Stdout' )
 	}
 	if ( process.stderr ) {
-		this._ogStderrWrite = process.stderr.write;
-		this._ogStderrEnd = process.stderr.end;
-		process.stderr.write = this._stderrWrite.bind( this );
-		process.stderr.end = this._stdoutEnd.bind( this );
+		this._hookStreamCopierFn( process.stderr, 'write', 'Stderr' )
+		this._hookStreamCopierFn( process.stderr, 'end', 'Stderr' )
 	}
 
 	HttpApp.call( this, appRequest || LoggedHttpAppRequest, host, port )
@@ -28,52 +20,24 @@ function LoggedHttpApp ( appRequest, host, port ) {
 
 LoggedHttpApp.extend( HttpApp, {
 
-	// double stdout write
-	_stdoutWrite: function () {
-		var stdout = null;
-		if ( (stdout = process.stdout) ) {
-			this._ogStdoutWrite.apply( stdout, arguments );
-		}
-		var domain = process.domain;
-		if ( domain && (stdout = domain.HttpAppRequest.Stdout) ) {
-			stdout.write.apply( stdout, arguments );
-		}
-	},
+	_hookStreamCopierFn: function ( stream, streamCallName, appRqStreamName ) {
 
-	// double stdout end
-	_stdoutEnd: function () {
-		var stdout = null;
-		if ( (stdout = process.stdout) ) {
-			this._ogStdoutEnd.apply( stdout, arguments );
-		}
-		var domain = process.domain;
-		if ( domain && (stdout = domain.HttpAppRequest.Stdout) ) {
-			stdout.end.apply( stdout, arguments );
-		}
-	},
+		var originalCall = stream[ streamCallName ];
+		
+		stream[ streamCallName ] = function () {
 
-	// double stderr write
-	_stderrWrite: function () {
-		var stderr = null;
-		if ( (stderr = process.stderr) ) {
-			this._ogStderrWrite.apply( stderr, arguments );
-		}
-		var domain = process.domain;
-		if ( domain && (stderr = domain.HttpAppRequest.Stderr) ) {
-			stderr.write.apply( stderr, arguments );
-		}
-	},
+			// call the originall .write() or .end()
+			var ret = originalCall.apply( stream, arguments );
 
-	// double stderr end
-	_stderrEnd: function () {
-		var stderr = null;
-		if ( (stderr = process.stderr) ) {
-			this._ogStderrEnd.apply( stderr, arguments );
-		}
-		var domain = process.domain;
-		if ( domain && (stderr = domain.HttpAppRequest.Stderr) ) {
-			stderr.end.apply( stderr, arguments );
-		}
+			// call .write() or .end() on the log file
+			var domain = process.domain;
+			var appRqStream = null;
+			if ( domain && (appRqStream = domain.HttpAppRequest.LogStreams[ appRqStreamName ]) ) {
+				appRqStream[ streamCallName ].apply( appRqStream, arguments );
+			}
+
+			return ret;
+		};
 	},
 
 	getConfig: function () {

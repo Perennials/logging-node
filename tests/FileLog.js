@@ -1,6 +1,7 @@
 var FileLog = require( '../FileLog.js' );
 var Path = require( 'path' );
 var Fs = require( 'fs' );
+var Helpers = require( './Helpers' );
 
 Unitest( 'FileLog._dataLabelToFileExt()', function ( test ) {
 	test( FileLog._dataLabelToFileExt( 'DATA_JSON' ) == 'json' );
@@ -27,7 +28,8 @@ UnitestA( 'FileLog()', function ( test ) {
 
 UnitestA( 'FileLog.startSession()', function ( test ) {
 	var dir = __dirname + Path.sep + 'testlogs';
-	Fs.mkdirSync( dir );
+	try { Fs.mkdirSync( dir ); }
+	catch ( e ) {}
 	test( Fs.existsSync( dir ) );
 
 	// start a file log
@@ -42,29 +44,25 @@ UnitestA( 'FileLog.startSession()', function ( test ) {
 		}
 
 		// start a session with parent and name
-		log.startSession( '123', { Name: 'Sesiq' }, function ( err, sessionId ) {
+		log.startSession( '123', [ 'Sesiq' ], function ( err, sessionId ) {
 
 			test( !err );
 
 			// check if we have proper meta data for the session
-			test( Fs.existsSync( dir + Path.sep + 'LogSession_' + log.getSessionId() ) );
+			test( Fs.existsSync( dir + Path.sep + FileLog.LogSessionDirectoryFormat.replace( '{LogSession}', log.getSessionId() ) ) );
 			test( log.getLoggedRecords()[ 0 ] == '1-META.json' );
 			var fn = log.getStorageUri() + '/' + log.getLoggedRecords()[ 0 ];
 			test( Fs.existsSync( fn ) );
 			
 			var meta = JSON.parse( Fs.readFileSync( fn, { encoding: 'utf8' } ) );
-			test( meta.Api == 'logging-node-1.0' );
+			test( meta.Api == 'logging-node' );
 			test( meta.LogSpecs == '0.9' );
 			test( meta.LogSession == log.getSessionId() );
 			test( meta.ParentSession == '123' );
 			test( meta.Name == 'Sesiq' );
 
 			// clean everything
-			var records = log.getLoggedRecords();
-			for ( var i = records.length - 1; i >= 0; --i ) {
-				Fs.unlinkSync( log.getStorageUri() + '/' + records[ i ] );
-			}
-			Fs.rmdirSync( log.getStorageUri() );
+			Helpers.removeLogSession( log );
 			Fs.rmdirSync( dir );
 			test.out();
 		} );
@@ -74,7 +72,8 @@ UnitestA( 'FileLog.startSession()', function ( test ) {
 
 UnitestA( 'FileLog.waitRecords()', function ( test ) {
 	var dir = __dirname + Path.sep + 'testlogs';
-	Fs.mkdirSync( dir );
+	try { Fs.mkdirSync( dir ); }
+	catch ( e ) {}
 	test( Fs.existsSync( dir ) );
 
 	// start a file log
@@ -111,10 +110,8 @@ UnitestA( 'FileLog.waitRecords()', function ( test ) {
 			log.waitRecords( function () {
 				var records = log.getLoggedRecords();
 				test( records.length == 3 );
-				for ( var i = records.length - 1; i >= 0; --i ) {
-					Fs.unlinkSync( log.getStorageUri() + '/' + records[ i ] );
-				}
-				Fs.rmdirSync( log.getStorageUri() );
+				// clean everything
+				Helpers.removeLogSession( log );
 				Fs.rmdirSync( dir );
 				test.out();
 			} );
