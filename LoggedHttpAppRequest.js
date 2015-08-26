@@ -48,7 +48,7 @@ function LoggedHttpAppRequest ( app, req, res ) {
 		}
 		
 		//todo: get the parent session from somewhere
-		log.startSession( null, null, function ( err, id ) {
+		log.startSession( null, [ 'SESSION_SERVER_REQUEST' ], function ( err, id ) {
 			if ( err ) {
 				cancelLogging();
 				return;

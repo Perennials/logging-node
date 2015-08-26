@@ -8,7 +8,8 @@ function ILogEngine () {
 
 ILogEngine.define( {
 	getLoggedRecords: function () {},
-	getRecordsInProgress: function () {},
+	getOpenRecords: function () {},
+	getOpenSteams: function () {},
 	getSessionId: function () {},
 	startSession: function ( parentId, props, callback ) {},
 	write: function ( data, props, callback ) {},
@@ -93,6 +94,21 @@ ILogEngine.defineStatic( {
 		Name: 'RecordType',
 		Value: 'SERVER_RESPONSE'
 	},
+
+	SESSION_GENERIC: {
+		Name: 'SessionType',
+		Value: 'GENERIC'
+	},
+
+	SESSION_SERVER_REQUEST: {
+		Name: 'SessionType',
+		Value: 'SERVER_REQUEST'
+	},
+
+	SESSION_APP_RUN: {
+		Name: 'SessionType',
+		Value: 'APP_RUN'
+	},
 	
 	// converts 'text/xml' to 'XML'
 	mimeToDataType: function ( contentType, def ) {
@@ -147,7 +163,7 @@ ILogEngine.defineStatic( {
 	},
 
 	// converts 'DATA_XML' to DataType: 'XML'
-	labelsToProps: function ( labels, applyDefaults ) {
+	labelsToProps: function ( labels, defaults ) {
 		var props = labels;
 		if ( labels instanceof Array ) {
 			props = {};
@@ -163,16 +179,28 @@ ILogEngine.defineStatic( {
 			}
 		}
 
-		if ( applyDefaults ) {
-			if ( props.RecordType === undefined ) {
-				props.RecordType = ILogEngine.RECORD_GENERIC.Value;
+		if ( Object.isObject( props ) && defaults ) {
+
+			for ( var key in defaults ) {
+				if ( props[ key ] === undefined ) {
+					props[ key ] = defaults[ key ];
+				}
+				
 			}
-			if ( props.DataType === undefined ) {
-				props.DataType = ILogEngine.DATA_BINARY.Value;
-			}
+
 		}
 
 		return props;
+	}
+} );
+
+ILogEngine.defineStatic( {
+	DefaultRecordProps: {
+		RecordType: ILogEngine.RECORD_GENERIC.Value,
+		DataType: ILogEngine.DATA_BINARY.Value
+	},
+	DefaultSessionProps: {
+		SessionType: ILogEngine.SESSION_GENERIC.Value,
 	}
 } );
 

@@ -24,7 +24,11 @@ BlackHoleLog.extend( ILogEngine, {
 		return [];
 	},
 
-	getRecordsInProgress: function () {
+	getOpenRecords: function () {
+		return [];
+	},
+
+	getOpenSteams: function () {
 		return [];
 	},
 	

@@ -1,4 +1,5 @@
 var FileLog = require( '../FileLog.js' );
+var ILogEngine = require( '../ILogEngine.js' );
 var Path = require( 'path' );
 var Fs = require( 'fs' );
 var Helpers = require( './Helpers' );
@@ -56,7 +57,8 @@ UnitestA( 'FileLog.startSession()', function ( test ) {
 			
 			var meta = JSON.parse( Fs.readFileSync( fn, { encoding: 'utf8' } ) );
 			test( meta.Api == 'logging-node' );
-			test( meta.LogSpecs == '0.9' );
+			test( meta.SessionType == ILogEngine.SESSION_GENERIC.Value );
+			test( meta.LogSpecs == '0.9.2' );
 			test( meta.LogSession == log.getSessionId() );
 			test( meta.ParentSession == '123' );
 			test( meta.Name == 'Sesiq' );

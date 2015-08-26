@@ -100,7 +100,7 @@ FileLog.extend( ILogEngine, {
 
 	_checkLastWrite: function () {
 		if ( this._notifyAfterLastWrite.length > 0 &&
-			 this.getRecordsInProgress().length === 0 ) {
+			 this.getOpenRecords().length === 0 ) {
 			
 			var callbacks = this._notifyAfterLastWrite;
 			for ( var i = 0, iend = callbacks.length; i < iend; ++i ) {
@@ -127,7 +127,7 @@ FileLog.extend( ILogEngine, {
 	},
 
 	waitRecords: function ( callback ) {
-		if ( this.getRecordsInProgress().length === 0 ) {
+		if ( this.getOpenRecords().length === 0 ) {
 			if ( callback instanceof Function ) {
 				process.nextTick( callback );
 			}
@@ -142,10 +142,10 @@ FileLog.extend( ILogEngine, {
 
 		if ( props instanceof Function ) {
 			callback = props;
-			props = null;
+			props = {};
 		}
 
-		props = ILogEngine.labelsToProps( props );
+		props = ILogEngine.labelsToProps( props, ILogEngine.DefaultSessionProps );
 
 		var fileName = FileLog.LogSessionDirectoryFormat;
 
@@ -166,7 +166,7 @@ FileLog.extend( ILogEngine, {
 			var meta = {
 				Api: 'logging-node',
 				ApiVersion: '0.9',
-				LogSpecs: '0.9',
+				LogSpecs: '0.9.2',
 				LogSession: id,
 				ParentSession: parentId,
 				TimeStamp: (new Date()).toISOString()
@@ -193,8 +193,20 @@ FileLog.extend( ILogEngine, {
 		return this._loggedIds;
 	},
 
-	getRecordsInProgress: function () {
+	getOpenRecords: function () {
 		return Object.keys( this._queue );
+	},
+
+	getOpenSteams: function () {
+		var ret = {};
+		var queue = this._queue;
+		for ( var name in queue ) {
+			var record = queue[ name ];
+			if ( record instanceof Object ) {
+				ret[ name ] = record;
+			}
+		}
+		return ret;
 	},
 	
 	write: function ( data, props, callback ) {
@@ -204,7 +216,7 @@ FileLog.extend( ILogEngine, {
 			props = [ 'RECORD_GENERIC', String.isString( data ) ? 'DATA_TEXT' : 'DATA_JSON' ];
 		}
 
-		props = ILogEngine.labelsToProps( props, true );
+		props = ILogEngine.labelsToProps( props, ILogEngine.DefaultRecordProps );
 
 		var fileName = this._makeRecordId( props );
 
@@ -231,18 +243,21 @@ FileLog.extend( ILogEngine, {
 			props = [ 'RECORD_STREAM', 'DATA_TEXT' ];
 		}
 
-		props = ILogEngine.labelsToProps( props, true );
+		props = ILogEngine.labelsToProps( props, ILogEngine.DefaultRecordProps );
 		
 		var fileName = this._makeRecordId( props );
 		var index = this._fileCount - 1;
 		var stream = Fs.createWriteStream( this._dir + fileName, { flags: 'w+' } );
 
 		var _this = this;
+		this._queue[ fileName ] = stream;
 		
 		// if error occurs before open call the callback, otherwise remove this listener in the open handler
 		// error event handler
 		var errListener = function ( err ) {
 			stream.removeListener( 'open', openListener );
+
+			delete _this._queue[ fileName ];
 
 			if ( callback instanceof Function ) {
 				process.nextTick( function () {
@@ -254,8 +269,6 @@ FileLog.extend( ILogEngine, {
 		// open event handler
 		var openListener = function ( fd ) {
 			stream.removeListener( 'error', errListener );
-			
-			_this._queue[ fileName ] = true;
 
 			// close event handler
 			stream.once( 'close', function () {

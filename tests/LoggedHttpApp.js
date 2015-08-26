@@ -4,10 +4,98 @@ var HttpRequest = require( 'Net/HttpRequest' );
 var Fs = require( 'fs' );
 var Helpers = require( './Helpers' );
 
+var logsDir = __dirname + '/testlogs';
+
+UnitestA( 'SESSION_APP_RUN no logs', function ( test ) {
+	var app1 = new LoggedHttpApp( null, '127.0.0.1', 55555 );
+	var cfg = app1.getConfig();
+	cfg.merge( { storage: { log:  logsDir } } );
+	try { Fs.mkdirSync( logsDir ); }
+	catch ( e ) {}
+	test( Fs.existsSync( logsDir ) );
+	
+	app1.getLog( function ( err, log ) {
+
+		test( !err );
+		// we have no output so no logs should be created
+		test( !log );
+
+		Fs.rmdirSync( logsDir );
+		test( !Fs.existsSync( logsDir ) );
+		app1.close( function () {
+			test.out();
+		} );
+
+	} );
+} );
+
+function SyncEvents ( event, objects, callback ) {
+	var unfinished = objects.length;
+
+	if ( unfinished === 0 ) {
+		process.nextTick( callback );
+		return;
+	}
+
+	for ( var i = objects.length - 1; i >= 0; --i ) {
+		objects[ i ].once( event, function () {
+			if ( --unfinished === 0 ) {
+				process.nextTick( callback );
+			}
+		} );
+	}
+}
+
+UnitestA( 'SESSION_APP_RUN logs upon console.log()', function ( test ) {
+	var app1 = new LoggedHttpApp( null, '127.0.0.1', 55555 );
+	var cfg = app1.getConfig();
+	cfg.merge( { storage: { log:  logsDir } } );
+	try { Fs.mkdirSync( logsDir ); }
+	catch ( e ) {}
+	test( Fs.existsSync( logsDir ) );
+	
+	console.log( 'asd' );
+	console.error( 'qwe' );
+
+	// wait until we have log initialized
+	// but this doesn't mean the log streams are ready and we don't have listeners for this
+	app1.getLog( function ( err, log ) {
+
+		// wait a little bit so hopefully all streams (initiated by the console calls above) are open
+		// no guarantee though
+		setTimeout( function () {
+			var streams = log.getOpenSteams();
+			var records = log.getOpenRecords();
+			for ( var name in streams ) {
+				streams[ name ].end();
+				streams[ name ].close();
+			}
+
+			SyncEvents( 'close', Object.values( streams ), function () {
+
+				test( 'asd\n' == Fs.readFileSync( log.getStorageUri() + '/' + records[ 0 ], { encoding: 'utf8' } ) );
+				test( 'qwe\n' == Fs.readFileSync( log.getStorageUri() + '/' + records[ 1 ], { encoding: 'utf8' } ) );
+
+				app1.close( function () {
+
+					test( !err );
+					log.waitRecords( function () {
+						Helpers.removeLogSession( log );
+						Fs.rmdirSync( logsDir );
+						test.out();
+					} );
+
+				} );
+
+			} );
+
+		}, 100 );
+
+	} );
+} );
+
 UnitestA( 'LoggedHttpAppRequest.onHttpContent', function ( test ) {
 
-	var logsDir = __dirname + '/testlogs';
-	
 	function TestAppRequest ( app, req, res ) {
 		LoggedHttpAppRequest.call( this, app, req, res );
 	}

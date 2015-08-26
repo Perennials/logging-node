@@ -5,9 +5,10 @@ var BufferedStream = require( './BufferedStream' );
 // this class will defer opening a log stream until the first write
 // if it doesn't have an ILogEngine associated with it, it will buffer the writes
 // all buffered content will be flushed once a log is assigned
-function DeferredLogStream ( props, flushedCallback ) {
+function DeferredLogStream ( props, onFlush, onFirstWrite ) {
 	this._props = props;
-	this._flushedCallback = flushedCallback;
+	this._onFlush = onFlush;
+	this._onFirstWrite = onFirstWrite;
 	this._log = null;
 	this._stream = null;
 }
@@ -19,6 +20,9 @@ DeferredLogStream.define( {
 		if ( stream === null ) {
 			stream = new BufferedStream();
 			this._stream = stream;
+			if ( this._onFirstWrite instanceof Function ) {
+				this._onFirstWrite();
+			}
 			if ( this._log !== null ) {
 				this._openLogStream();
 				
@@ -54,8 +58,8 @@ DeferredLogStream.define( {
 			_this._stream.flush( stream );
 			_this._stream = stream;
 
-			if ( _this._flushedCallback instanceof Function ) {
-				_this._flushedCallback( stream );
+			if ( _this._onFlush instanceof Function ) {
+				_this._onFlush( stream );
 			}
 		} );
 	}
