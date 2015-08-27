@@ -2,17 +2,18 @@
 
 var HttpAppRequest = require( 'App/HttpAppRequest' );
 var FileLog = require( './FileLog' );
-var BufferedStream = require( './BufferedStream' );
-var DeferredLogStream = require( './DeferredLogStream' );
-var MirrorLogger = require( './MirrorLogger' );
+var WriteBuffer = require( './WriteBuffer' );
+var DeferredRecord = require( './DeferredRecord' );
 var Os = require( 'os' );
+var IncomingMessageLogger  = require( './IncomingMessageLogger' );
+var ServerResponseLogger  = require( './ServerResponseLogger' );
 
 function LoggedHttpAppRequest ( app, req, res ) {
 	
 	var _this = this;
 
-	// BufferedStream is buffering write calls so it will work for FileLog too
-	this.Log = new BufferedStream();
+	// WriteBuffer is buffering write calls so it will work for FileSession too
+	this.LogSession = new WriteBuffer();
 
 	function makeLogStreamCallback( logStreamName ) {
 		return function ( stream ) {
@@ -23,43 +24,44 @@ function LoggedHttpAppRequest ( app, req, res ) {
 	// defer all log streams - open them on the first write
 	// stdout and stderr are hooked in the LoggedHttpApp class and the call is redirected to the current domain
 	this.LogStreams = {
-		Stdout: new DeferredLogStream( [ 'STDOUT', 'RECORD_STREAM', 'DATA_TEXT' ], makeLogStreamCallback( 'Stdout' ) ),
-		Stderr: new DeferredLogStream( [ 'STDERR', 'RECORD_STREAM', 'DATA_TEXT' ], makeLogStreamCallback( 'Stderr' ) ),
-		Request: new DeferredLogStream( [ 'RECORD_SERVER_REQUEST', 'DATA_TEXT' ], makeLogStreamCallback( 'Request' ) ),
-		Response: new DeferredLogStream( [ 'RECORD_SERVER_RESPONSE', 'DATA_TEXT' ], makeLogStreamCallback( 'Response' ) )
+		Stdout: new DeferredRecord( [ 'STDOUT', 'RECORD_STREAM', 'DATA_TEXT' ], makeLogStreamCallback( 'Stdout' ) ),
+		Stderr: new DeferredRecord( [ 'STDERR', 'RECORD_STREAM', 'DATA_TEXT' ], makeLogStreamCallback( 'Stderr' ) ),
+		Request: new DeferredRecord( [ 'RECORD_SERVER_REQUEST', 'DATA_TEXT' ], makeLogStreamCallback( 'Request' ) ),
+		Response: new DeferredRecord( [ 'RECORD_SERVER_RESPONSE', 'DATA_TEXT' ], makeLogStreamCallback( 'Response' ) )
 	};
 	
 
 	function cancelLogging () {
-		_this.Log = null;
+		_this.LogSession = null;
 		_this.LogStreams = {
 			Stdout: null,
 			Stderr: null,
 			Request: null,
 			Response: null
 		};
+		_this._requestHook.unhook();
+		_this._requestResponse.unhook();
 	}
 
 	// open all log streams but don't make the request wait for us, defer and buffer
-	new FileLog( app.getConfig().get( 'storage.log' ), function ( err, log ) {
+	this._log = new FileLog( app.getConfig().get( 'storage.log' ), function ( err, log ) {
 		if ( err ) {
 			cancelLogging();
 			return;
 		}
-		
-		//todo: get the parent session from somewhere
-		log.startSession( null, [ 'SESSION_SERVER_REQUEST' ], function ( err, id ) {
+
+		log.openSession( req.headers[ 'freedom2-debug-logsession-parent' ], [ 'SESSION_SERVER_REQUEST' ], function ( err, session ) {
 			if ( err ) {
 				cancelLogging();
 				return;
 			}
 
 			// flush the buffered writes
-			_this.Log.flush( log );
-			_this.Log = log;
+			_this.LogSession.flush( session );
+			_this.LogSession = session;
 
 			for ( var steamName in _this.LogStreams ) {
-				_this.LogStreams[ steamName ].assignLog( log );
+				_this.LogStreams[ steamName ].assignSession( session );
 			}
 		} );
 	} );
@@ -98,12 +100,12 @@ function LoggedHttpAppRequest ( app, req, res ) {
 		}
 	};
 
-	this.Log.write( env, [ 'RECORD_SERVER_ENV', 'DATA_JSON' ] );
+	this.LogSession.write( env, [ 'RECORD_SERVER_ENV', 'DATA_JSON' ] );
 
 	// log req
-	MirrorLogger.mirrorIncomingMessage( req, _this.LogStreams.Request );
+	this._requestHook = new IncomingMessageLogger( req, _this.LogStreams.Request );
 	// log res
-	MirrorLogger.mirrorServerResponse( res, _this.LogStreams.Response );
+	this._responseHook = new ServerResponseLogger( res, _this.LogStreams.Response );
 
 	HttpAppRequest.call( this, app, req, res );
 	this.Domain.HttpAppRequest = this;
@@ -113,19 +115,21 @@ function LoggedHttpAppRequest ( app, req, res ) {
 LoggedHttpAppRequest.extend( HttpAppRequest, {
 
 	onError: function ( err ) {
-		if ( this.Log ) {
-			this.Log.write( err, [ 'RECORD_EXCEPTION', 'DATA_TEXT' ] );
+		if ( this.LogSession ) {
+			this.LogSession.write( err, [ 'RECORD_EXCEPTION', 'DATA_TEXT' ] );
 		}
 		HttpAppRequest.prototype.onError.call( this, err );
 	},
 
 	dispose: function () {
 		
+		var _this = this;
 		for ( var steamName in this.LogStreams ) {
 			var stream = this.LogStreams[ steamName ];
 			if ( stream !== null ) {
-				stream.close();
-				this.LogStreams[ steamName ] = null;
+				stream.close( function () {
+					_this.LogStreams[ steamName ] = null;
+				} );
 			}
 		}
 

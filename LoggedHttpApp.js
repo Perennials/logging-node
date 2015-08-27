@@ -1,14 +1,13 @@
 var HttpApp = require( 'App/HttpApp' );
 var Config = require( 'App/Config' );
 var LoggedHttpAppRequest = require( './LoggedHttpAppRequest' );
-var DeferredLogStream = require( './DeferredLogStream' );
+var DeferredRecord = require( './DeferredRecord' );
 var FileLog = require( './FileLog' );
-
-//todo: maybe we can have functions for explicitly opening the log streams in case we need fine grained control
 
 function LoggedHttpApp ( appRequest, host, port ) {
 	this._config = new Config();
 	this._log = null;
+	this._logSession = null;
 	this._firstWrite = false;
 	this._consoleBackup = { stdout: {}, stderr: {} };
 
@@ -17,7 +16,7 @@ function LoggedHttpApp ( appRequest, host, port ) {
 	function makeLogStreamCallback( logStreamName ) {
 		return function ( stream ) {
 			_this._logStreams[ logStreamName ] = stream;
-			stream.once( 'close', function () {
+			stream.once( 'Record.Closed', function () {
 				// don't attempt to continue logging if the streams are closed
 				_this._logStreams[ logStreamName ] = null;
 			} );
@@ -29,12 +28,12 @@ function LoggedHttpApp ( appRequest, host, port ) {
 	// defer all log streams - open them on the first write
 	// stdout and stderr are hooked in the LoggedHttpApp class and the call is redirected if there is no domain
 	this._logStreams = {
-		Stdout: new DeferredLogStream(
+		Stdout: new DeferredRecord(
 			[ 'STDOUT', 'RECORD_STREAM', 'DATA_TEXT' ],
 			makeLogStreamCallback( 'Stdout' ),
 			onFirstWrite
 		),
-		Stderr: new DeferredLogStream(
+		Stderr: new DeferredRecord(
 			[ 'STDERR', 'RECORD_STREAM', 'DATA_TEXT' ],
 			makeLogStreamCallback( 'Stderr' ),
 			onFirstWrite
@@ -43,12 +42,12 @@ function LoggedHttpApp ( appRequest, host, port ) {
 
 	// hijack stdout/stderr so all console.log() and similar can be intercepted
 	if ( process.stdout ) {
-		this._hookStreamCopierFn( 'stdout', 'write', 'Stdout' )
-		this._hookStreamCopierFn( 'stdout', 'end', 'Stdout' )
+		this._writeHook( 'stdout', 'Stdout' )
+		this._endHook( 'stdout', 'Stdout' )
 	}
 	if ( process.stderr ) {
-		this._hookStreamCopierFn( 'stderr', 'write', 'Stderr' )
-		this._hookStreamCopierFn( 'stderr', 'end', 'Stderr' )
+		this._writeHook( 'stderr', 'Stderr' )
+		this._endHook( 'stderr', 'Stderr' )
 	}
 
 	HttpApp.call( this, appRequest || LoggedHttpAppRequest, host, port )
@@ -69,54 +68,55 @@ LoggedHttpApp.extend( HttpApp, {
 
 		function cancelLogging ( err ) {
 			_this._log = null;
+			_this._logSession = null;
 			_this._logStreams = {
 				Stdout: null,
 				Stderr: null
 			};
-			if ( _this._onLogReady instanceof Function ) {
+			if ( _this._onLogSessionReady instanceof Function ) {
 				process.nextTick( function () {
-					_this._onLogReady( err, null );
+					_this._onLogSessionReady( err, null );
 				} );
 			}
 		}
 
-		new FileLog( this.getConfig().get( 'storage.log' ), function ( err, log ) {
+		var cfg = this.getConfig();
+		this._log = new FileLog( cfg.get( 'storage.log' ), function ( err, log ) {
 			if ( err ) {
 				cancelLogging( err );
 				return;
 			}
 			
 			//todo: consider instance identifier in the session names
-			log.startSession( null, [ 'SESSION_APP_RUN' ], function ( err, id ) {
+			log.openSession( null, [ 'SESSION_APP_RUN' ], function ( err, session ) {
 				if ( err ) {
 					cancelLogging( err );
 					return;
 				}
 
-				_this._log = log;
+				_this._logSession = session;
 
-				for ( var steamName in _this._logStreams ) {
-					_this._logStreams[ steamName ].assignLog( log );
+				for ( var streamName in _this._logStreams ) {
+					_this._logStreams[ streamName ].assignSession( session );
 				}
 
-				if ( _this._onLogReady instanceof Function ) {
+				if ( _this._onLogSessionReady instanceof Function ) {
 					process.nextTick( function () {
-						_this._onLogReady( null, log );
+						_this._onLogSessionReady( null, session );
 					} );
 				}
 			} );
 		} );
 	},
 
-	_hookStreamCopierFn: function ( streamName, streamCallName, appRqStreamName ) {
-
+	_writeHook: function ( streamName, appRqStreamName ) {
 		var app = this;
 		var stream = process[ streamName ];
-		var originalCall = stream[ streamCallName ];
+		var originalCall = stream.write;
 
-		this._consoleBackup[ streamName ][ streamCallName ] = originalCall;
+		this._consoleBackup[ streamName ].write = originalCall;
 		
-		stream[ streamCallName ] = function () {
+		stream.write = function ( data, encoding, callback ) {
 
 			// call the originall .write() or .end()
 			var ret = originalCall.apply( stream, arguments );
@@ -125,10 +125,38 @@ LoggedHttpApp.extend( HttpApp, {
 			var domain = process.domain;
 			var fileStream = null;
 			if ( domain && (fileStream = domain.HttpAppRequest.LogStreams[ appRqStreamName ]) ) {
-				fileStream[ streamCallName ].apply( fileStream, arguments );
+				fileStream.write( data );
 			}
 			else if ( fileStream = app._logStreams[ appRqStreamName ] ) {
-				fileStream[ streamCallName ].apply( fileStream, arguments );
+				fileStream.write( data );
+			}
+
+			return ret;
+		};
+	},
+
+	_endHook: function ( streamName, appRqStreamName ) {
+		var app = this;
+		var stream = process[ streamName ];
+		var originalCall = stream.end;
+
+		this._consoleBackup[ streamName ].end = originalCall;
+		
+		stream.end = function ( data, encoding, callback ) {
+
+			// call the originall .write() or .end()
+			var ret = originalCall.apply( stream, arguments );
+			
+			// call .write() or .end() on the log file
+			var domain = process.domain;
+			var fileStream = null;
+			if ( domain && (fileStream = domain.HttpAppRequest.LogStreams[ appRqStreamName ]) ) {
+				//bp: node's end will call write, so just close. if all ok close should happen after the write. britle code though
+				fileStream.close();
+			}
+			else if ( fileStream = app._logStreams[ appRqStreamName ] ) {
+				//bp: node's end will call write, so just close. if all ok close should happen after the write. britle code though
+				fileStream.close();
 			}
 
 			return ret;
@@ -143,15 +171,15 @@ LoggedHttpApp.extend( HttpApp, {
 		}
 	},
 
-	getLog: function ( callback ) {
+	getLogSession: function ( callback ) {
 		var _this = this;
-		if ( this._log || this._firstWrite === false ) {
+		if ( this._logSession || this._firstWrite === false ) {
 			process.nextTick( function () {
-				callback( null, _this.log );
+				callback( null, _this._logSession );
 			} );
 		}
 		else {
-			this._onLogReady = callback;
+			this._onLogSessionReady = callback;
 		}
 	},
 
@@ -195,9 +223,9 @@ LoggedHttpApp.extend( HttpApp, {
 
 			var activeLoggers = _this._requests.length;
 			
-			if ( _this._log ) {
+			if ( _this._logSession ) {
 				++activeLoggers;
-				_this._log.waitRecords( function () {
+				_this._logSession.wait( function () {
 					if ( --activeLoggers === 0 ) {
 						process.nextTick( callback );
 					}
@@ -212,14 +240,14 @@ LoggedHttpApp.extend( HttpApp, {
 				// so make sure we try to finalize and close everything after the .end() call
 				for ( var i = activeLoggers - ( _this._log ? 2 : 1 ); i >= 0; --i ) {
 					var request = _this._requests[ i ];
-					if ( request.Log === null ) {
+					if ( request.LogSession === null ) {
 						if ( --activeLoggers === 0 ) {
 							process.nextTick( callback );
 						}
 						continue;
 					}
 					request.dispose();
-					request.Log.waitRecords( function () {
+					request.LogSession.wait( function () {
 						if ( --activeLoggers === 0 ) {
 							process.nextTick( callback );
 						}

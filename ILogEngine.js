@@ -2,19 +2,16 @@
 
 require( 'Prototype' );
 
-function ILogEngine () {
+var Events = require( 'events' );
 
+function ILogEngine () {
 }
 
-ILogEngine.define( {
-	getLoggedRecords: function () {},
-	getOpenRecords: function () {},
-	getOpenSteams: function () {},
-	getSessionId: function () {},
-	startSession: function ( parentId, props, callback ) {},
-	write: function ( data, props, callback ) {},
-	openStream: function ( props, callback ) {},
-	waitRecords: function ( callback ) {}
+ILogEngine.extend( Events.EventEmitter, {
+	getOpenedSessions: function () {},
+	getLoggedSessions: function () {},
+	openSession: function ( parentId, props, callback ) {},
+	wait: function ( callback ) {}
 } );
 
 ILogEngine.defineStatic( {
