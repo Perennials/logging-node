@@ -119,7 +119,7 @@ UnitestA( 'LoggedHttpAppRequest.onHttpContent', function ( test ) {
 
 				test( !err );
 
-				// test we have a couple of streams
+				//todo: test we have a couple of streams
 
 				// test( Fs.existsSync(  ) )
 
@@ -140,6 +140,7 @@ UnitestA( 'LoggedHttpAppRequest.onHttpContent', function ( test ) {
 	test( Fs.existsSync( logsDir ) );
 	app1.startListening();
 	(new HttpRequest( 'http://127.0.0.1:55555' ))
+		.setOptions( { LogRecord: { RequestProps: [ 'rq' ], ResponseProps: [ 'rs' ] } } )
 		.setHeader( 'someting', 'custom' )
 		.send( 'asd.qwe' );
 

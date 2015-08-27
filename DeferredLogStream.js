@@ -37,6 +37,10 @@ DeferredLogStream.define( {
 	},
 
 	close: function () {
+		var stream = this._stream;
+		if ( stream && !(stream instanceof BufferedStream) ) {
+			stream.close();
+		}
 		this._stream = null;
 	},
 

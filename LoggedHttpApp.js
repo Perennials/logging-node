@@ -135,6 +135,7 @@ LoggedHttpApp.extend( HttpApp, {
 		};
 	},
 
+	// if we dont have this and construct new instance it will mess up. need to .close() though
 	_recoverConsoleFunctions: function ( streamName ) {
 		var backup = this._consoleBackup[ streamName ];
 		for ( var callName in backup ) {

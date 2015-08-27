@@ -51,17 +51,15 @@ UnitestA( 'FileLog.startSession()', function ( test ) {
 
 			// check if we have proper meta data for the session
 			test( Fs.existsSync( dir + Path.sep + FileLog.LogSessionDirectoryFormat.replace( '{LogSession}', log.getSessionId() ) ) );
-			test( log.getLoggedRecords()[ 0 ] == '1-META.json' );
+			test( log.getLoggedRecords()[ 0 ] == '1-META-Sesiq.json' );
 			var fn = log.getStorageUri() + '/' + log.getLoggedRecords()[ 0 ];
 			test( Fs.existsSync( fn ) );
 			
 			var meta = JSON.parse( Fs.readFileSync( fn, { encoding: 'utf8' } ) );
 			test( meta.Api == 'logging-node' );
-			test( meta.SessionType == ILogEngine.SESSION_GENERIC.Value );
 			test( meta.LogSpecs == '0.9.2' );
 			test( meta.LogSession == log.getSessionId() );
 			test( meta.ParentSession == '123' );
-			test( meta.Name == 'Sesiq' );
 
 			// clean everything
 			Helpers.removeLogSession( log );

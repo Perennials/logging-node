@@ -95,6 +95,16 @@ ILogEngine.defineStatic( {
 		Value: 'SERVER_RESPONSE'
 	},
 
+	RECORD_HTTP_REQUEST: {
+		Name: 'RecordType',
+		Value: 'HTTP_REQUEST'
+	},
+
+	RECORD_HTTP_RESPONSE: {
+		Name: 'RecordType',
+		Value: 'HTTP_RESPONSE'
+	},
+
 	SESSION_GENERIC: {
 		Name: 'SessionType',
 		Value: 'GENERIC'

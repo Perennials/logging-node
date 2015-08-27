@@ -172,9 +172,9 @@ FileLog.extend( ILogEngine, {
 				TimeStamp: (new Date()).toISOString()
 			};
 
-			props.merge( meta );
+			props.merge( ILogEngine.labelsToProps( [ 'RECORD_META', 'DATA_JSON' ] ) );
 
-			_this.write( props, [ 'RECORD_META', 'DATA_JSON' ], function ( err ) {
+			_this.write( meta, props, function ( err ) {
 				if ( callback instanceof Function ) {
 					process.nextTick( function () {
 						callback( err, id );
