@@ -18,7 +18,6 @@ HttpLogger.defineStatic( {
 		//todo: this should be in human readable format. means not compressed and not chunked
 		//      i.e. need to hook the ServerResponse not the underlying socket
 
-		var log = this;
 		var LogRecord = options.LogRecord;
 		delete options.LogRecord;
 		var request = HttpLogger._nodeHttpRequest( options, callback );
@@ -37,7 +36,15 @@ HttpLogger.defineStatic( {
 
 		// defer so we get buffering in case the log file is not open yet when we get first data in
 		var requestLog = new DeferredRecord( LogRecord );
-		requestLog.assignLog( log );
+
+		//two cases: 1. we have a request context and the log should go there
+		//              1.1 the session can still be in process of opening
+		//           2. no request context, the log should go to the APP_RUN session
+		//           	2.1 this session is opened on first write and this write can come from here
+		//
+		// in both cases there could be many deferred records which should be assigned a session once we have one
+		
+		//requestLog.assignSession( log );
 
 		request.on( 'socket', function ( socket ) {
 
@@ -46,7 +53,6 @@ HttpLogger.defineStatic( {
 			} );
 
 			socket.on( 'end', function () {
-				requestLog.end();
 				requestLog.close();
 			} );
 
@@ -58,7 +64,7 @@ HttpLogger.defineStatic( {
 
 			// defer so we get buffering in case the log file is not open yet when we get first data in
 			var responseLog = new DeferredRecord( LogRecord );
-			responseLog.assignLog( log );
+			// responseLog.assignLog( log );
 
 			HttpLogger.mirrorIncomingMessage( response, responseLog );
 
@@ -68,8 +74,8 @@ HttpLogger.defineStatic( {
 		} );
 	},
 
-	hookNodeHttpModule: function ( log ) {
-		node.request = HttpLogger._newHttpRequest.bind( log );
+	hookNodeHttpModule: function () {
+		node.request = HttpLogger._newHttpRequest;
 	},
 
 	unhookNodeHttpModule: function () {

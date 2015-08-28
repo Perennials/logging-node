@@ -3,8 +3,8 @@
 var WriteBuffer = require( './WriteBuffer' );
 
 // this class will defer opening a log stream until the first write
-// if it doesn't have an ILogEngine associated with it, it will buffer the writes
-// all buffered content will be flushed once a log is assigned
+// if it doesn't have an ILogSession associated with it, it will buffer the writes
+// all buffered content will be flushed once a session is assigned
 function DeferredRecord ( props, onFlush, onFirstWrite ) {
 	this._props = props;
 	this._onFlush = onFlush;

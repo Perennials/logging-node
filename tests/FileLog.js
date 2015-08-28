@@ -3,7 +3,8 @@ var FileSession = require( '../FileSession.js' );
 var ILogEngine = require( '../ILogEngine.js' );
 var Path = require( 'path' );
 var Fs = require( 'fs' );
-var Helpers = require( './Helpers' );
+
+require( 'shelljs/global' );
 
 Unitest( 'FileSession._dataLabelToFileExt()', function ( test ) {
 	test( FileSession._dataLabelToFileExt( 'DATA_JSON' ) == 'json' );
@@ -29,8 +30,7 @@ UnitestA( 'FileLog()', function ( test ) {
 
 UnitestA( 'FileLog.openSession()', function ( test ) {
 	var dir = __dirname + Path.sep + 'testlogs' + Path.sep;
-	try { Fs.mkdirSync( dir ); }
-	catch ( e ) {}
+	mkdir( '-p', dir );
 	test( Fs.existsSync( dir ) );
 
 	// start a file log
@@ -50,21 +50,27 @@ UnitestA( 'FileLog.openSession()', function ( test ) {
 			test( !err );
 
 			// check if we have proper meta data for the session
-			test( Fs.existsSync( dir + Path.sep + FileSession.DirectoryFormat.replace( '{LogSession}', session.getId() ) ) );
-			test.eq( session.getLoggedRecords()[ 0 ], '1-META-Sesiq.json' );
+			test( Fs.existsSync( dir
+			                         + Path.sep
+			                         + FileSession.DirectoryFormat
+			                         	.replace( '{LogSession}', session.getId() )
+			                         	.replace( '{SessionName}', '-Sesiq' )
+			) );
+			test.eq( session.getLoggedRecords()[ 0 ], '1-META.json' );
 			var fn = session.getStorageUri() + '/' + session.getLoggedRecords()[ 0 ];
 			test( Fs.existsSync( fn ) );
 			
 			var meta = JSON.parse( Fs.readFileSync( fn, { encoding: 'utf8' } ) );
-			test( meta.Api == 'logging-node' );
-			test( meta.LogSpecs == '0.9.2' );
+			test( meta.Api == FileLog.Api );
+			test( meta.LogSpecs == FileLog.LogSpecs );
 			test( meta.LogSession == session.getId() );
 			test( meta.ParentSession == '123' );
 
 			// clean everything
-			Helpers.removeLogSession( session );
-			Fs.rmdirSync( dir );
-			test.out();
+			session.close( function () {
+				rm( '-rf', dir );
+				test.out();
+			} );
 		} );
 
 	} );
@@ -73,8 +79,7 @@ UnitestA( 'FileLog.openSession()', function ( test ) {
 
 UnitestA( 'FileSession.wait()', function ( test ) {
 	var dir = __dirname + Path.sep + 'testlogs';
-	try { Fs.mkdirSync( dir ); }
-	catch ( e ) {}
+	mkdir( '-p', dir );
 	test( Fs.existsSync( dir ) );
 
 	// start a file log
@@ -110,10 +115,9 @@ UnitestA( 'FileSession.wait()', function ( test ) {
 			session.wait( function () {
 				var records = session.getLoggedRecords();
 				test( records.length == 3 );
-				// clean everything
-				Helpers.removeLogSession( session );
-				Fs.rmdirSync( dir );
-				session.close();
+				session.close( function () {
+					rm( '-rf', dir );
+				} );
 			} );
 
 			log.wait( function () {

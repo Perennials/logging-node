@@ -6,6 +6,7 @@ var ILogEngine = require( './ILogEngine' );
 var ILogSession = require( './ILogSession' );
 var Path = require( 'path' );
 var FileRecord = require( './FileRecord' );
+var FileLog = null;
 
 function FileSession ( log, parentId, props, callback ) {
 
@@ -14,6 +15,7 @@ function FileSession ( log, parentId, props, callback ) {
 	this._fileCount = 0;
 	this._openRecords = [];
 	this._loggedRecords = [];
+	this._closed = false;
 
 	var _this = this;
 
@@ -25,8 +27,21 @@ function FileSession ( log, parentId, props, callback ) {
 	props = ILogEngine.labelsToProps( props, ILogEngine.DefaultSessionProps );
 
 	var fileName = FileSession.DirectoryFormat;
+	var sessionName = '';
+	if ( !Object.isObject( props ) ) {
+		props = {};
+	}
+	else {
+		// dont ruin the original object
+		props = {}.merge( props );
+	}
+	props.merge( ILogEngine.labelsToProps( [ 'RECORD_META', 'DATA_JSON' ] ) );
+	if ( props.Name !== undefined ) {
+		sessionName = '-' + props.Name;
+		delete props.Name;
+	}
 
-	this._makeSessionId( fileName, function ( err, id ) {
+	this._makeSessionId( fileName, sessionName, function ( err, id, dirName ) {
 
 		// this will never happen. the logic loops until it succeeds
 		if ( err ) {
@@ -40,27 +55,20 @@ function FileSession ( log, parentId, props, callback ) {
 			return;
 		}
 
-		_this._dir += FileSession.DirectoryFormat.replace( '{LogSession}', id ) + Path.sep;
+		_this._dir += dirName + Path.sep;
 		_this._id = id;
 
-		if ( !Object.isObject( props ) ) {
-			props = {};
-		}
-		else {
-			// dont ruin the original object
-			props = {}.merge( props );
-		}
+		// dependencies, ah
+		FileLog = FileLog || require( './FileLog' );
 
 		var meta = {
-			Api: 'logging-node',
-			ApiVersion: '0.9',
-			LogSpecs: '0.9.2',
+			Api: FileLog.Api,
+			ApiVersion: FileLog.ApiVersion,
+			LogSpecs: FileLog.LogSpecs,
 			LogSession: id,
 			ParentSession: parentId,
 			TimeStamp: (new Date()).toISOString()
 		};
-
-		props.merge( ILogEngine.labelsToProps( [ 'RECORD_META', 'DATA_JSON' ] ) );
 
 		_this.write( meta, props, function ( err ) {
 
@@ -79,24 +87,25 @@ function FileSession ( log, parentId, props, callback ) {
 
 FileSession.extend( ILogSession, {
 
-	_makeSessionId: function ( fileName, callback, _num ) {
+	_makeSessionId: function ( fileName, sessionName, callback, _num ) {
 		if ( _num === undefined ) {
 			_num = Date.now();
 		}
 
 		var id = _num.toString( 36 );
-		var path = this._dir + fileName.replace( '{LogSession}', id );
+		var dirName = fileName.replace( '{LogSession}', id ).replace( '{SessionName}', sessionName );
+		var path = this._dir + dirName;
 		
 		var _this = this;
 
 		// try to create a dir with unique name
 		Fs.mkdir( path, function( err, fd ) {
 			if ( err ) {
-				_this._makeSessionId( fileName, callback, _num + 1 );
+				_this._makeSessionId( fileName, sessionName, callback, _num + 1 );
 			}
 			else {
 				process.nextTick( function () {
-					callback( null, id )
+					callback( null, id, dirName )
 				} );
 			}
 		} );
@@ -132,6 +141,15 @@ FileSession.extend( ILogSession, {
 
 	close: function ( callback ) {
 		var _this = this;
+
+		if ( this._closed ) {
+			if ( callback instanceof Function ) {
+				process.nextTick( function () {
+					callback( null, _this );
+				} );
+			}	
+			return;
+		}
 		
 		this.wait( function () {
 			
@@ -139,9 +157,11 @@ FileSession.extend( ILogSession, {
 				TimeStamp: (new Date()).toISOString()
 			};
 
-			var props = ILogEngine.labelsToProps( [ 'RECORD_META', 'DATA_JSON' ] );
+			var props = ILogEngine.labelsToProps( [ 'RECORD_CLOSE', 'DATA_JSON' ] );
 
 			_this.write( meta, props, function ( err ) {
+
+				_this._closed = true;
 
 				_this.emit( 'Session.Closed', err, _this );
 
@@ -190,7 +210,7 @@ FileSession.extend( ILogSession, {
 
 FileSession.defineStatic( {
 
-	DirectoryFormat: /*'LogSession_' +*/ '{LogSession}',
+	DirectoryFormat: '{LogSession}{SessionName}',
 
 	_dataTypeToFileExt: function ( dataType, def ) {
 		return FileSession._dataLabelToFileExt( 'DATA_' + dataType, def );

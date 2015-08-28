@@ -96,4 +96,12 @@ FileLog.extend( ILogEngine, {
 
 } ).implement( ILogEngine );
 
+FileLog.defineStatic( {
+
+	Api: 'logging-node',
+	ApiVersion: '0.9',
+	LogSpecs: '0.9.4'
+
+} );
+
 module.exports = FileLog;

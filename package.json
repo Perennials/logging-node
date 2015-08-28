@@ -15,7 +15,8 @@
 		"Net": "https://github.com/perennials/net-node/tarball/master"
 	},
 	"devDependencies": {
-		"Unitest": "https://github.com/perennials/unitest-js/tarball/master"
+		"Unitest": "https://github.com/perennials/unitest-js/tarball/master",
+		"shelljs": "*"
 	},
 	"repository": {
 		"type": "git",

@@ -3,6 +3,7 @@ var Config = require( 'App/Config' );
 var LoggedHttpAppRequest = require( './LoggedHttpAppRequest' );
 var DeferredRecord = require( './DeferredRecord' );
 var FileLog = require( './FileLog' );
+var Os = require( 'os' );
 
 function LoggedHttpApp ( appRequest, host, port ) {
 	this._config = new Config();
@@ -95,6 +96,8 @@ LoggedHttpApp.extend( HttpApp, {
 				}
 
 				_this._logSession = session;
+
+				LoggedHttpApp.logServerEnv( session );
 
 				for ( var streamName in _this._logStreams ) {
 					_this._logStreams[ streamName ].assignSession( session );
@@ -197,6 +200,14 @@ LoggedHttpApp.extend( HttpApp, {
 		}
 
 		function dontLogAnythingAnymore () {
+
+			if ( _this._logStreams.Stdout ) {
+				_this._logStreams.Stdout.close();
+			}
+			if ( _this._logStreams.Stderr ) {
+				_this._logStreams.Stderr.close();
+			}
+
 			_this._log = null;
 			_this._logStreams = {
 				Stdout: null,
@@ -225,7 +236,7 @@ LoggedHttpApp.extend( HttpApp, {
 			
 			if ( _this._logSession ) {
 				++activeLoggers;
-				_this._logSession.wait( function () {
+				_this._logSession.close( function () {
 					if ( --activeLoggers === 0 ) {
 						process.nextTick( callback );
 					}
@@ -246,15 +257,59 @@ LoggedHttpApp.extend( HttpApp, {
 						}
 						continue;
 					}
-					request.dispose();
-					request.LogSession.wait( function () {
-						if ( --activeLoggers === 0 ) {
-							process.nextTick( callback );
-						}
-					} );
+					else {
+						request.LogSession.once( 'Session.Closed', function () {
+							if ( --activeLoggers === 0 ) {
+								process.nextTick( callback );
+							}
+						} );
+						request.dispose();
+					}
 				}
 			}
 		} );
+	}
+
+} );
+
+LoggedHttpApp.defineStatic( {
+
+	logServerEnv: function ( session ) {
+		// log the server environment
+		var env = {
+			process: {
+				cwd: process.cwd(),
+				execPath: process.execPath,
+				argv: process.argv,
+				execArgv: process.execArgv,
+				env: process.env,
+				title: process.title,
+				pid: process.pid,
+				gid: process.getgid(),
+				uid: process.getuid(),
+				groups: process.getgroups(),
+				umask: process.umask()
+			},
+			node: {
+				version: process.version,
+				versions: process.versions,
+				config: process.config,
+			},
+			os: {
+				type: Os.type(),
+				platform: Os.platform(),
+				arch: Os.arch(),
+				release: Os.release(),
+				tmpdir: Os.tmpdir(),
+				endianness: Os.endianness(),
+				hostname: Os.hostname(),
+				totalmem: Os.totalmem(),
+				cpus: Os.cpus(),
+				networkInterfaces: Os.networkInterfaces()
+			}
+		};
+
+		session.write( env, [ 'RECORD_SERVER_ENV', 'DATA_JSON' ] );
 	}
 
 } );

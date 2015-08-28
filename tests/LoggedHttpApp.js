@@ -2,7 +2,8 @@ var LoggedHttpApp = require( '../LoggedHttpApp' );
 var LoggedHttpAppRequest = require( '../LoggedHttpAppRequest' );
 var HttpRequest = require( 'Net/HttpRequest' );
 var Fs = require( 'fs' );
-var Helpers = require( './Helpers' );
+
+require( 'shelljs/global' );
 
 var logsDir = __dirname + '/testlogs';
 
@@ -10,8 +11,7 @@ UnitestA( 'SESSION_APP_RUN no logs', function ( test ) {
 	var app1 = new LoggedHttpApp( null, '127.0.0.1', 55555 );
 	var cfg = app1.getConfig();
 	cfg.merge( { storage: { log:  logsDir } } );
-	try { Fs.mkdirSync( logsDir ); }
-	catch ( e ) {}
+	mkdir( '-p', logsDir );
 	test( Fs.existsSync( logsDir ) );
 	
 	app1.getLogSession( function ( err, session ) {
@@ -20,7 +20,7 @@ UnitestA( 'SESSION_APP_RUN no logs', function ( test ) {
 		// we have no output so no logs should be created
 		test( !session );
 
-		Fs.rmdirSync( logsDir );
+		rm( '-rf', logsDir );
 		test( !Fs.existsSync( logsDir ) );
 		app1.close( function () {
 			test.out();
@@ -50,8 +50,7 @@ UnitestA( 'SESSION_APP_RUN logs upon console.log()', function ( test ) {
 	var app1 = new LoggedHttpApp( null, '127.0.0.1', 55555 );
 	var cfg = app1.getConfig();
 	cfg.merge( { storage: { log:  logsDir } } );
-	try { Fs.mkdirSync( logsDir ); }
-	catch ( e ) {}
+	mkdir( '-p', logsDir );
 	test( Fs.existsSync( logsDir ) );
 	
 	console.log( 'asd' );
@@ -71,15 +70,14 @@ UnitestA( 'SESSION_APP_RUN logs upon console.log()', function ( test ) {
 				var records = session.getLoggedRecords();
 
 				// check logs are in the app run log
-				test( 'asd\n' == Fs.readFileSync( session.getStorageUri() + '/' + records[ 1 ], { encoding: 'utf8' } ) );
-				test( 'qwe\n' == Fs.readFileSync( session.getStorageUri() + '/' + records[ 2 ], { encoding: 'utf8' } ) );
+				test( 'asd\n' == Fs.readFileSync( session.getStorageUri() + '/' + records[ 2 ], { encoding: 'utf8' } ) );
+				test( 'qwe\n' == Fs.readFileSync( session.getStorageUri() + '/' + records[ 3 ], { encoding: 'utf8' } ) );
 
 				app1.close( function () {
 
 					test( !err );
-					session.wait( function () {
-						Helpers.removeLogSession( session );
-						Fs.rmdirSync( logsDir );
+					session.close( function () {
+						rm( '-rf', logsDir );
 						test.out();
 					} );
 
@@ -119,19 +117,20 @@ UnitestA( 'LoggedHttpAppRequest.onHttpContent', function ( test ) {
 
 				_this.App.close( function () {
 
-					// if we have 5 files - two std streams, an exception, a meta
-					test( _this.LogSession.getLoggedRecords().length === 7 );
+					_this.LogSession.close( function () {
+						// if we have 8 files - two std streams, an exception, a meta, a close, a server env, server rq and rs
+						test( _this.LogSession.getLoggedRecords().length === 8 );
 
-					//if the console calls went properly in the session
-					test.eq( 'asd\n', Fs.readFileSync( _this.LogSession.getStorageUri() + '/' + _this.LogSession.getLoggedRecords()[ 2 ], { encoding: 'utf8' } ) );
-					test.eq( 'qwe\n', Fs.readFileSync( _this.LogSession.getStorageUri() + '/' + _this.LogSession.getLoggedRecords()[ 3 ], { encoding: 'utf8' } ) );
-					//test the server response was logged
-					test.eq( '123456', Fs.readFileSync( _this.LogSession.getStorageUri() + '/' + _this.LogSession.getLoggedRecords()[ 5 ], { encoding: 'utf8' } ) );
+						//if the console calls went properly in the session
+						test.eq( 'asd\n', Fs.readFileSync( _this.LogSession.getStorageUri() + '/' + _this.LogSession.getLoggedRecords()[ 2 ], { encoding: 'utf8' } ) );
+						test.eq( 'qwe\n', Fs.readFileSync( _this.LogSession.getStorageUri() + '/' + _this.LogSession.getLoggedRecords()[ 3 ], { encoding: 'utf8' } ) );
+						//test the server response was logged
+						test.eq( '123456', Fs.readFileSync( _this.LogSession.getStorageUri() + '/' + _this.LogSession.getLoggedRecords()[ 5 ], { encoding: 'utf8' } ) );
+						
+						rm( '-rf', logsDir );
+						test.out();
+					} );
 
-
-					Helpers.removeLogSession( _this.LogSession );
-					Fs.rmdirSync( logsDir );
-					test.out();
 				} );
 			} );
 		}
@@ -140,8 +139,7 @@ UnitestA( 'LoggedHttpAppRequest.onHttpContent', function ( test ) {
 	var app1 = new LoggedHttpApp( TestAppRequest, '127.0.0.1', 55555 );
 	var cfg = app1.getConfig();
 	cfg.merge( { storage: { log:  logsDir } } );
-	try { Fs.mkdirSync( logsDir ); }
-	catch ( e ) {}
+	mkdir( '-p', logsDir );
 	test( Fs.existsSync( logsDir ) );
 	app1.startListening();
 	(new HttpRequest( 'http://127.0.0.1:55555' ))

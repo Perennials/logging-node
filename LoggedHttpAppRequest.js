@@ -4,9 +4,9 @@ var HttpAppRequest = require( 'App/HttpAppRequest' );
 var FileLog = require( './FileLog' );
 var WriteBuffer = require( './WriteBuffer' );
 var DeferredRecord = require( './DeferredRecord' );
-var Os = require( 'os' );
 var IncomingMessageLogger  = require( './IncomingMessageLogger' );
 var ServerResponseLogger  = require( './ServerResponseLogger' );
+var LoggedHttpApp = null;
 
 function LoggedHttpAppRequest ( app, req, res ) {
 	
@@ -67,41 +67,8 @@ function LoggedHttpAppRequest ( app, req, res ) {
 	} );
 
 	// log the server environment
-	var env = {
-		process: {
-			cwd: process.cwd(),
-			execPath: process.execPath,
-			argv: process.argv,
-			execArgv: process.execArgv,
-			env: process.env,
-			title: process.title,
-			pid: process.pid,
-			gid: process.getgid(),
-			uid: process.getuid(),
-			groups: process.getgroups(),
-			umask: process.umask()
-		},
-		node: {
-			version: process.version,
-			versions: process.versions,
-			config: process.config,
-		},
-		os: {
-			type: Os.type(),
-			platform: Os.platform(),
-			arch: Os.arch(),
-			release: Os.release(),
-			tmpdir: Os.tmpdir(),
-			endianness: Os.endianness(),
-			hostname: Os.hostname(),
-			totalmem: Os.totalmem(),
-			cpus: Os.cpus(),
-			networkInterfaces: Os.networkInterfaces()
-		}
-	};
-
-	this.LogSession.write( env, [ 'RECORD_SERVER_ENV', 'DATA_JSON' ] );
-
+	LoggedHttpApp = LoggedHttpApp || require( './LoggedHttpApp' );
+	LoggedHttpApp.logServerEnv( this.LogSession );
 	// log req
 	this._requestHook = new IncomingMessageLogger( req, _this.LogStreams.Request );
 	// log res
@@ -131,6 +98,10 @@ LoggedHttpAppRequest.extend( HttpAppRequest, {
 					_this.LogStreams[ steamName ] = null;
 				} );
 			}
+		}
+
+		if ( this.LogSession ) {
+			this.LogSession.close();
 		}
 
 		HttpAppRequest.prototype.dispose.call( this );
