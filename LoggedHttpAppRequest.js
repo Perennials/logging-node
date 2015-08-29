@@ -43,6 +43,7 @@ function LoggedHttpAppRequest ( app, req, res ) {
 		_this._requestResponse.unhook();
 	}
 
+	// todo: don't open new FileLog for each request, reuse the app's one
 	// open all log streams but don't make the request wait for us, defer and buffer
 	this._log = new FileLog( app.getConfig().get( 'storage.log' ), function ( err, log ) {
 		if ( err ) {
@@ -50,7 +51,7 @@ function LoggedHttpAppRequest ( app, req, res ) {
 			return;
 		}
 
-		log.openSession( req.headers[ 'freedom2-debug-logsession-parent' ], [ 'SESSION_SERVER_REQUEST' ], function ( err, session ) {
+		log.openSession( req.headers[ 'freedom2-debug-logsession' ], [ 'SESSION_SERVER_REQUEST' ], function ( err, session ) {
 			if ( err ) {
 				cancelLogging();
 				return;
