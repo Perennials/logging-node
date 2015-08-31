@@ -6,12 +6,13 @@ var ILogEngine = require( './ILogEngine' );
 var ILogSession = require( './ILogSession' );
 var Path = require( 'path' );
 var FileRecord = require( './FileRecord' );
+var DeferredLog = require( './DeferredLog' );
 var FileLog = null;
 
 function FileSession ( log, parentId, props, callback ) {
 
 	ILogSession.call( this, log, parentId, props, callback );
-	this._dir = log.getStorageUri();
+	this._dir = ( log instanceof DeferredLog ? log.getLog().getStorageUri() : log.getStorageUri() );
 	this._fileCount = 0;
 	this._openRecords = [];
 	this._loggedRecords = [];
@@ -141,7 +142,6 @@ FileSession.extend( ILogSession, {
 
 	close: function ( callback ) {
 		var _this = this;
-
 		if ( this._closed ) {
 			if ( callback instanceof Function ) {
 				process.nextTick( function () {
@@ -198,6 +198,7 @@ FileSession.extend( ILogSession, {
 	},
 
 	wait: function ( callback ) {
+
 		if ( this._openRecords.length === 0 ) {
 			process.nextTick( callback );
 			return;

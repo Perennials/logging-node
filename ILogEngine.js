@@ -55,6 +55,12 @@ ILogEngine.defineStatic( {
 	RECORD_META: {
 		Name: 'RecordType',
 		Value: 'META'
+
+	},
+
+	RECORD_CLOSE: {
+		Name: 'RecordType',
+		Value: 'CLOSE'
 	},
 
 	RECORD_GENERIC: {
@@ -198,6 +204,22 @@ ILogEngine.defineStatic( {
 		}
 
 		return props;
+	},
+
+	// normalize data for ILogRecord.write
+	normalizeData: function ( data, props ) {
+		// handle known data types
+		if ( data instanceof Error &&
+		     props.DataType == ILogEngine.DATA_TEXT.Value ) {
+			
+			data = data.stack;
+		}
+		else if ( data instanceof Object &&
+			 props.DataType == ILogEngine.DATA_JSON.Value ) {
+			
+			data = JSON.stringify( data );
+		}
+		return data;
 	}
 } );
 

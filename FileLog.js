@@ -61,6 +61,10 @@ FileLog.extend( ILogEngine, {
 		return this._openSessions;
 	},
 
+	getLoggedSessions: function () {
+		return this._loggedSessions;
+	},
+
 	getStorageUri: function () {
 		return this._dir;
 	},
@@ -97,6 +101,8 @@ FileLog.extend( ILogEngine, {
 } ).implement( ILogEngine );
 
 FileLog.defineStatic( {
+
+	LogSessionClass: FileSession,
 
 	Api: 'logging-node',
 	ApiVersion: '0.9',

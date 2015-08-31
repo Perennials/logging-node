@@ -39,19 +39,7 @@ ILogSession.extend( Events.EventEmitter, {
 
 		props = ILogEngine.labelsToProps( props, ILogEngine.DefaultRecordProps );
 
-		// handle known data types
-		if ( data instanceof Error &&
-		     props.DataType == ILogEngine.DATA_TEXT.Value ) {
-			
-			data = data.stack;
-		}
-		else if ( data instanceof Object &&
-			 props.DataType == ILogEngine.DATA_JSON.Value ) {
-			
-			data = JSON.stringify( data );
-		}
-
-		//todo: handle http classes here
+		data = ILogEngine.normalizeData( data, props );
 
 		this.openRecord( props, function ( err, record ) {
 			if ( err ) {
