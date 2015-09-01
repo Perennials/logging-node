@@ -2,38 +2,33 @@
 
 var HttpAppRequest = require( 'App/HttpAppRequest' );
 var FileLog = require( './FileLog' );
-var WriteBuffer = require( './WriteBuffer' );
 var DeferredRecord = require( './DeferredRecord' );
-var IncomingMessageLogger  = require( './IncomingMessageLogger' );
-var ServerResponseLogger  = require( './ServerResponseLogger' );
+var IncomingMessageLogger  = require( './loggers/IncomingMessageLogger' );
+var WritableLogger  = require( './loggers/WritableLogger' );
+var ConsoleLogger  = require( './loggers/ConsoleLogger' );
 var LoggedHttpApp = null;
 
 function LoggedHttpAppRequest ( app, req, res ) {
 	
 	var _this = this;
 
-	// WriteBuffer is buffering write calls so it will work for FileSession too
 	this.LogSession = app.getLog().openSession( req.headers[ 'freedom2-debug-logsession' ], [ 'SESSION_SERVER_REQUEST' ] );
 
 	// log the server environment
 	LoggedHttpApp = LoggedHttpApp || require( './LoggedHttpApp' );
 	LoggedHttpApp.logServerEnv( this.LogSession );
+	
 	// log req
-	var reqLog = this.LogSession.openRecord( [ 'RECORD_SERVER_REQUEST', 'DATA_TEXT' ] );
-	this._requestHook = new IncomingMessageLogger( req, reqLog );
+	new IncomingMessageLogger( req, this.LogSession.openRecord( [ 'RECORD_SERVER_REQUEST', 'DATA_TEXT' ] ) );
 
-	//todo: this causes a nasty loop on writing to the record
 	// log res
-	// var resLog = this.LogSession.openRecord( [ 'RECORD_SERVER_RESPONSE', 'DATA_TEXT' ] );
-	// this._responseHook = new ServerResponseLogger( res, resLog );
+	new WritableLogger( res, this.LogSession.openRecord( [ 'RECORD_SERVER_RESPONSE', 'DATA_TEXT' ] ) );
 
 	// defer all log streams - open them on the first write
 	// stdout and stderr are hooked in the LoggedHttpApp class and the call is redirected to the current domain
 	this.LogStreams = {
 		Stdout: this.LogSession.openRecord( [ 'STDOUT', 'RECORD_STREAM', 'DATA_TEXT' ] ),
 		Stderr: this.LogSession.openRecord( [ 'STDERR', 'RECORD_STREAM', 'DATA_TEXT' ] ),
-		Request: reqLog,
-		// Response: resLog
 	};	
 
 	HttpAppRequest.call( this, app, req, res );

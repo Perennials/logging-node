@@ -7,7 +7,8 @@ var Fs = require( 'fs' );
 require( 'shelljs/global' );
 
 var logsDir = __dirname + '/testlogs';
-/*
+
+
 UnitestA( 'SESSION_APP_RUN no logs', function ( test ) {
 	var app1 = new LoggedHttpApp( null, '127.0.0.1', 55555 );
 	var cfg = app1.getConfig();
@@ -94,7 +95,8 @@ UnitestA( 'SESSION_APP_RUN logs upon console.log()', function ( test ) {
 
 	} );
 } );
-*/
+
+
 UnitestA( 'LoggedHttpAppRequest logging', function ( test ) {
 
 	function TestAppRequest ( app, req, res ) {
@@ -111,10 +113,10 @@ UnitestA( 'LoggedHttpAppRequest logging', function ( test ) {
 		},
 
 		onError: function ( err ) {
-			if ( global.errored ) {
-				return;
-			}
-			global.errored = true;
+			// if ( global.errored ) {
+			// 	return;
+			// }
+			// global.errored = true;
 			var _this = this;
 			this.Response.write( '123' );
 			this.Response.end( '456' );
@@ -126,16 +128,25 @@ UnitestA( 'LoggedHttpAppRequest logging', function ( test ) {
 
 					_this.LogSession.close( function () {
 						// if we have 8 files - two std streams, an exception, a meta, a close, a server env, server rq and rs
-						// test( _this.LogSession.getLoggedRecords().length === 8 );
+						test( _this.LogSession.getLoggedRecords().length === 8 );
 
 						//if the console calls went properly in the session
-						// test.eq( 'asd\n', Fs.readFileSync( _this.LogSession.getStorageUri() + '/' + _this.LogSession.getLoggedRecords()[ 2 ], { encoding: 'utf8' } ) );
-						// test.eq( 'qwe\n', Fs.readFileSync( _this.LogSession.getStorageUri() + '/' + _this.LogSession.getLoggedRecords()[ 3 ], { encoding: 'utf8' } ) );
+						test.eq( 'asd\n', Fs.readFileSync( _this.LogSession.getStorageUri() + '/' + _this.LogSession.getLoggedRecords()[ 3 ], { encoding: 'utf8' } ) );
+						test.eq( 'qwe\n', Fs.readFileSync( _this.LogSession.getStorageUri() + '/' + _this.LogSession.getLoggedRecords()[ 4 ], { encoding: 'utf8' } ) );
 						//test the server response was logged
-						// test.eq( '123456', Fs.readFileSync( _this.LogSession.getStorageUri() + '/' + _this.LogSession.getLoggedRecords()[ 5 ], { encoding: 'utf8' } ) );
+						test.eq( '123456', Fs.readFileSync( _this.LogSession.getStorageUri() + '/' + _this.LogSession.getLoggedRecords()[ 5 ], { encoding: 'utf8' } ) );
 						
-						rm( '-rf', logsDir );
-						test.out();
+
+						app1.getLogSession( function ( err, session ) {
+
+							test( !err );
+							// meta, env, rq, rs, close
+							test( session.getLoggedRecords().length === 5 );
+							
+							rm( '-rf', logsDir );
+							test.out();
+
+						} );
 					} );
 
 				} );

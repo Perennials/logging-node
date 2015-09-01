@@ -5,7 +5,13 @@ function IncomingMessageLogger ( src, dest ) {
 	this._dest = dest;
 
 	// write the headers
-	var headers = [ src.method.toUpperCase() + ' ' + src.url + ' HTTP/' + src.httpVersion ];
+	var headers = null;
+	if ( src.method ) {
+		headers = [ src.method.toUpperCase() + ' ' + src.url + ' HTTP/' + src.httpVersion ];;	
+	}
+	else {
+		headers = [ 'HTTP/' + src.httpVersion + ' ' + src.statusCode + ' ' + src.statusMessage ];
+	}
 	var rawHeaders = src.rawHeaders;
 	for ( var i = 0, iend = rawHeaders.length; i < iend; i += 2 ) {
 		headers.push( rawHeaders[ i ] + ': ' + rawHeaders[ i + 1 ] );

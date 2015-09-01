@@ -2,8 +2,8 @@
 
 var Events = require( 'events' );
 var Fs = require( 'fs' );
-var ILogEngine = require( './ILogEngine' );
-var ILogSession = require( './ILogSession' );
+var ILogEngine = require( './model/ILogEngine' );
+var ILogSession = require( './model/ILogSession' );
 var Path = require( 'path' );
 var FileRecord = require( './FileRecord' );
 var DeferredLog = require( './DeferredLog' );
@@ -195,6 +195,7 @@ FileSession.extend( ILogSession, {
 				_this.emit( 'Session.Idle', _this );
 			}
 		} );
+		return record;
 	},
 
 	wait: function ( callback ) {

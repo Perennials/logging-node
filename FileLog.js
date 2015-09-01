@@ -1,6 +1,6 @@
 "use strict";
 
-var ILogEngine = require( './ILogEngine' );
+var ILogEngine = require( './model/ILogEngine' );
 var FileSession = require( './FileSession' );
 var Fs = require( 'fs' );
 var Os = require( 'os' );

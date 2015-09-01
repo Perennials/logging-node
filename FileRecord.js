@@ -1,10 +1,11 @@
 "use strict";
 
 var Events = require( 'events' );
-var ILogRecord = require( './ILogRecord' );
-var ILogEngine = require( './ILogEngine' );
+var ILogRecord = require( './model/ILogRecord' );
+var ILogEngine = require( './model/ILogEngine' );
 var Path = require( 'path' );
 var Fs = require( 'fs' );
+var CallBuffer = require( './CallBuffer' );
 
 function FileRecord ( session, props, callback ) {
 	ILogRecord.call( this, session, props, callback );
@@ -16,7 +17,6 @@ function FileRecord ( session, props, callback ) {
 
 	props = ILogEngine.labelsToProps( props, ILogEngine.DefaultRecordProps );
 
-	
 	var session = this.getSession();
 	var fileName = session._makeRecordId( props );
 	var uri = session.getStorageUri() + Path.sep + fileName;
@@ -26,6 +26,7 @@ function FileRecord ( session, props, callback ) {
 	this._uri = uri;
 	this._index = index;
 	this._pendingWrites = 0;
+	this._buffer = new CallBuffer();
 	
 	var stream = Fs.createWriteStream( uri, { flags: 'w+' } );
 
@@ -36,6 +37,7 @@ function FileRecord ( session, props, callback ) {
 	// if error occurs before open call the callback, otherwise remove this listener in the open handler
 	// error event handler
 	var errListener = function ( err ) {
+
 		_this.emit( 'Record.Open.Error', err, _this );
 		stream.removeListener( 'open', openListener );
 
@@ -44,6 +46,8 @@ function FileRecord ( session, props, callback ) {
 				callback( err, _this );
 			} );
 		}
+
+		_this._buffer = null;
 	};
 
 	// open event handler
@@ -57,6 +61,10 @@ function FileRecord ( session, props, callback ) {
 				callback( null, _this );
 			} );
 		}
+
+		var buffer = _this._buffer;
+		_this._buffer = null;
+		buffer.flush( _this );
 	};
 
 	stream.once( 'error', errListener );
@@ -79,6 +87,11 @@ FileRecord.extend( ILogRecord, {
 	
 	close: function ( callback ) {
 
+		if ( this._buffer ) {
+			this._buffer.push( 'close', callback );
+			return;
+		}
+
 		var _this = this;
 		this.wait( function () {
 
@@ -97,6 +110,12 @@ FileRecord.extend( ILogRecord, {
 	},
 	
 	write: function ( data, callback ) {
+
+		if ( this._buffer ) {
+			this._buffer.push( 'write', data, callback );
+			return;
+		}
+
 		var _this = this;
 		++this._pendingWrites;
 		this._stream.write( data, function ( err ) {

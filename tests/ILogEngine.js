@@ -1,4 +1,4 @@
-var ILogEngine = require( '../ILogEngine.js' );
+var ILogEngine = require( '../model/ILogEngine.js' );
 
 Unitest( 'ILogEngine.mimeToDataType()', function ( test ) {
 	test( ILogEngine.mimeToDataType( 'application/json; charset=utf-8' ) === ILogEngine.DATA_JSON.Value );

@@ -1,6 +1,6 @@
 var FileLog = require( '../FileLog.js' );
 var FileSession = require( '../FileSession.js' );
-var ILogEngine = require( '../ILogEngine.js' );
+var ILogEngine = require( '../model/ILogEngine.js' );
 var Path = require( 'path' );
 var Fs = require( 'fs' );
 

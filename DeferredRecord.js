@@ -1,7 +1,7 @@
 "use strict";
 
-var ILogRecord = require( './ILogRecord' );
-var WriteBuffer = require( './WriteBuffer' );
+var ILogRecord = require( './model/ILogRecord' );
+var CallBuffer = require( './CallBuffer' );
 var ProxyEvents = require( './DeferredHelpers' ).ProxyEvents;
 
 // this class will defer opening a log stream until the first write
@@ -15,6 +15,7 @@ function DeferredRecord ( session, props, callback ) {
 	this._buffer = null;
 	this._queueClose = false;
 	this._closed = false;
+	this._openingSession = false;
 
 	if ( callback instanceof Function ) {
 		var _this = this;
@@ -59,11 +60,11 @@ DeferredRecord.extend( ILogRecord, {
 
 		var buffer = this._buffer;
 		if ( buffer === null ) {
-			buffer = new WriteBuffer();
+			buffer = new CallBuffer();
 			this._buffer = buffer;
 		}
 
-		var ret = buffer.write( data, callback );
+		var ret = buffer.push( 'write', data, callback );
 		var session = this._session;
 		if ( session.getLogSession() !== null ) {
 			this.assignSession( session );
@@ -86,20 +87,18 @@ DeferredRecord.extend( ILogRecord, {
 
 		// don't close before we have flushed
 		if ( this._buffer ) {
-			if ( this._queueClose === null ) {
-				this._queueClose = this.once( 'Deferred.Flush', this.close.bind( this ) );
-			}
+			this._buffer.push( 'close', callback );
 			return;
 		}
 
 
+		this._closed = true;
 		var obj = this._record;
 		var ret = null;
 		if ( obj ) {
 			ret = obj.close( callback );
 		}
 		else {
-			this._closed = true;
 			this.emit( 'Record.Closed', null, this );
 		}
 
@@ -123,8 +122,16 @@ DeferredRecord.extend( ILogRecord, {
 			return;
 		}
 
+		if ( this._openingSession ) {
+			return;
+		}
+
+		this._openingSession = true;
+
 		var _this = this;
 		this._session.openRecord( this._props, function ( err, record ) {
+
+			_this._openingSession = false;
 			
 			if ( err ) {
 				// if this fails buffer will remain not null and record will be null and the next write() will lead to assignSession again

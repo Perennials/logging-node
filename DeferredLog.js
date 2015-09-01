@@ -1,6 +1,6 @@
 "use strict";
 
-var ILogEngine = require( './ILogEngine' );
+var ILogEngine = require( './model/ILogEngine' );
 var DeferredSession = require( './DeferredSession' );
 var ProxyEvents = require( './DeferredHelpers' ).ProxyEvents;
 
@@ -8,6 +8,7 @@ function DeferredLog ( constructor ) {
 	this._log = null;
 	this._ctor = constructor;
 	this._ctorParams = Array.prototype.slice.call( arguments, 1 );
+	this._deferredSessions = [];
 }
 
 DeferredLog.extend( ILogEngine, {
@@ -37,8 +38,19 @@ DeferredLog.extend( ILogEngine, {
 	},
 
 	isEmpty: function () {
-		//todo:
-		return false;
+		//bp: if we have opened a real log assume we have written something it. not necessary the case though
+		if ( this._log ) {
+			return false;
+		}
+		else {
+			var sessions = this._deferredSessions;
+			for ( var i = sessions.length - 1; i >= 0; --i ) {
+				if ( !sessions[ i ].isEmpty() ) {
+					return false;
+				}
+			}
+		}
+		return true;
 	},
 
 	getLog: function () {
@@ -67,8 +79,14 @@ DeferredLog.extend( ILogEngine, {
 			return obj.openSession( parentId, props, callback );
 		}
 		else {
+			var _this = this;
 			var session = new DeferredSession( this._ctor.LogSessionClass, this, parentId, props, callback );
 			session.on( 'Deferred.Open', this._onSessionOpen.bind( this ) );
+			session.on( 'Session.Opened', function ( err, session ) {
+				var sessions = _this._deferredSessions;
+				sessions.splice( sessions.indexOf( session ), 1 );
+			} );
+			this._deferredSessions.push( session );
 			return session;
 		}
 	},

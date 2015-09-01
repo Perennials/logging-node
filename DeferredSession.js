@@ -1,6 +1,6 @@
 "use strict";
 
-var ILogSession = require( './ILogSession' );
+var ILogSession = require( './model/ILogSession' );
 var DeferredRecord = require( './DeferredRecord' );
 var ProxyEvents = require( './DeferredHelpers' ).ProxyEvents;
 
@@ -21,16 +21,17 @@ function DeferredSession ( constructor, log, parentId, props, callback ) {
 DeferredSession.extend( ILogSession, {
 
 	_onLogOpened: function ( log ) {
-		if ( !this._openingSession ) {
+		if ( this._openingSession !== 1 ) {
 			return;
 		}
-		
+		this._openingSession = 2;
+
 		var _this = this;
-		var session = Object.newArgs( _this._ctor, _this._ctorParams )
+		var session = Object.newArgs( _this._ctor, _this._ctorParams );
 		session.on( 'Session.Opened', function ( err, session ) {
 
 			if ( err ) {
-				_this._openingSession = false;
+				_this._openingSession = 0;
 				return;
 			}
 
@@ -49,10 +50,10 @@ DeferredSession.extend( ILogSession, {
 
 	// open real session on first write and assign to all records
 	_onRecordOpen: function ( record ) {
-		if ( this._session || this._openingSession ) {
+		if ( this._session || this._openingSession > 0 ) {
 			return;
 		}
-		this._openingSession = true;
+		this._openingSession = 1;
 		this.emit( 'Deferred.Open', this );
 	},
 

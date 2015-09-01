@@ -3,7 +3,7 @@
 //todo: this should be in human readable format. means not compressed and not chunked
 //      i.e. need to hook the ServerResponse not the underlying socket
 
-function ServerResponseLogger ( src, dest ) {
+function WritableLogger ( src, dest ) {
 	this._src = src;
 	this._dest = dest;
 	this._srcWrite = src.write;
@@ -13,7 +13,7 @@ function ServerResponseLogger ( src, dest ) {
 
 }
 
-ServerResponseLogger.define( {
+WritableLogger.define( {
 
 	unhook: function () {
 		this._src.write = this._srcWrite;
@@ -40,4 +40,4 @@ ServerResponseLogger.define( {
 
 } );
 
-module.exports = ServerResponseLogger;
+module.exports = WritableLogger;
