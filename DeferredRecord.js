@@ -9,7 +9,7 @@ var ProxyEvents = require( './DeferredHelpers' ).ProxyEvents;
 // all buffered content will be flushed once a session is assigned
 function DeferredRecord ( session, props, callback ) {
 
-	ILogRecord.call( this, session, props, callback );
+	ILogRecord.call( this, null, props, callback );
 
 	this._record = null;
 	this._buffer = null;
@@ -66,7 +66,7 @@ DeferredRecord.extend( ILogRecord, {
 
 		var ret = buffer.push( 'write', data, callback );
 		var session = this._session;
-		if ( session.getLogSession() !== null ) {
+		if ( session !== null && session.getLogSession() !== null ) {
 			this.assignSession( session );
 		}
 		this.emit( 'Deferred.Open', this );
@@ -129,7 +129,7 @@ DeferredRecord.extend( ILogRecord, {
 		this._openingSession = true;
 
 		var _this = this;
-		this._session.openRecord( this._props, function ( err, record ) {
+		this._session.getLogSession().openRecord( this._props, function ( err, record ) {
 
 			_this._openingSession = false;
 			
@@ -138,9 +138,10 @@ DeferredRecord.extend( ILogRecord, {
 				return;
 			}
 			// first time we open a real log record, flush the buffer
-			_this._buffer.flush( record );
-			_this._record = record;
+			var buffer = _this._buffer;
 			_this._buffer = null;
+			_this._record = record;
+			buffer.flush( record );
 
 			ProxyEvents( [
 				'Record.Opened',

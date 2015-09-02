@@ -15,10 +15,13 @@ function DeferredSession ( constructor, log, parentId, props, callback ) {
 	this._openingSession = false;
 	this._closed = false;
 
-	log.on( 'Log.Opened', this._onLogOpened.bind( this ) );
 }
 
 DeferredSession.extend( ILogSession, {
+
+	assignLog: function ( log ) {
+		return this._onLogOpened( log );
+	},
 
 	_onLogOpened: function ( log ) {
 		if ( this._openingSession !== 1 ) {
@@ -54,6 +57,7 @@ DeferredSession.extend( ILogSession, {
 			return;
 		}
 		this._openingSession = 1;
+		this._log.once( 'Log.Opened', this._onLogOpened.bind( this ) );
 		this.emit( 'Deferred.Open', this );
 	},
 
@@ -112,21 +116,25 @@ DeferredSession.extend( ILogSession, {
 	},
 
 	openRecord: function ( props, callback ) {
+		var record = new DeferredRecord( this, props, callback );
+		var _this = this;
 		if ( this._session ) {
-			return this._session.openRecord( props, callback );
+			record.on( 'Deferred.Open', function () {
+				record.assignSession( _this );
+				var records = _this._deferredRecords;
+				records.splice( records.indexOf( record ) );
+			} );
 		}
 		else {
-			var record = new DeferredRecord( this, props, callback );
-			var _this = this;
 			record.on( 'Deferred.Open', this._onRecordOpen.bind( this ) );
 			this.once( 'Session.Opened', function ( err, session ) {
 				record.assignSession( session );
 				var records = _this._deferredRecords;
 				records.splice( records.indexOf( record ) );
-			} )
-			this._deferredRecords.push( record );
-			return record;
-		}	
+			} );
+		}
+		this._deferredRecords.push( record );
+		return record;
 	},
 
 	close: function ( callback ) {
@@ -144,22 +152,18 @@ DeferredSession.extend( ILogSession, {
 			return;
 		}
 
-		if ( callback instanceof Function ) {
-			if ( !this.isEmpty() ) {
-				var _this = this;
-				this.once( 'Session.Opened', function () {
-					_this.close( callback );
-				} );
-			}
-			else {
-				this._closed = true;
-				this.emit( 'Session.Closed', null, this );
-				process.nextTick( callback );
-			}
+		if ( !this.isEmpty() ) {
+			var _this = this;
+			this.once( 'Session.Opened', function () {
+				_this.close( callback );
+			} );
 		}
 		else {
 			this._closed = true;
 			this.emit( 'Session.Closed', null, this );
+			if ( callback instanceof Function ) {
+				process.nextTick( callback );
+			}
 		}
 	},
 

@@ -74,21 +74,23 @@ DeferredLog.extend( ILogEngine, {
 	},
 
 	openSession: function ( parentId, props, callback ) {
-		var obj = this._log;
-		if ( obj ) {
-			return obj.openSession( parentId, props, callback );
+		
+		var _this = this;
+		var session = new DeferredSession( this._ctor.LogSessionClass, this, parentId, props, callback );
+		if ( this._log ) {
+			session.on( 'Deferred.Open', function () {
+				session.assignLog( _this );
+			} );
 		}
 		else {
-			var _this = this;
-			var session = new DeferredSession( this._ctor.LogSessionClass, this, parentId, props, callback );
 			session.on( 'Deferred.Open', this._onSessionOpen.bind( this ) );
-			session.on( 'Session.Opened', function ( err, session ) {
-				var sessions = _this._deferredSessions;
-				sessions.splice( sessions.indexOf( session ), 1 );
-			} );
-			this._deferredSessions.push( session );
-			return session;
 		}
+		session.on( 'Session.Opened', function ( err, session ) {
+			var sessions = _this._deferredSessions;
+			sessions.splice( sessions.indexOf( session ), 1 );
+		} );
+		this._deferredSessions.push( session );
+		return session;
 	},
 
 	wait: function ( callback ) {

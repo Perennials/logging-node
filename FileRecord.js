@@ -75,6 +75,10 @@ FileRecord.extend( ILogRecord, {
 	_getIndex: function () {
 		return this._index;
 	},
+
+	isIdle: function () {
+		return this._pendingWrites === 0 && this._buffer === null;
+	},
 	
 	getId: function () {
 		return this._id;
@@ -131,7 +135,7 @@ FileRecord.extend( ILogRecord, {
 	},
 
 	wait: function ( callback ) {
-		if ( this._pendingWrites === 0 ) {
+		if ( this.isIdle() ) {
 			process.nextTick( callback );
 			return;
 		}

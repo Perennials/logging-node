@@ -132,6 +132,19 @@ FileSession.extend( ILogSession, {
 		return this._fileCount - 1;
 	},
 
+	isIdle: function () {
+		var records = this._openRecords;
+		if ( records.length === 0 ) {
+			return true;
+		}
+		for ( var i = records.length - 1; i >= 0; --i ) {
+			if ( !records[ i ].isIdle() ) {
+				return false;
+			}
+		}
+		return true;
+	},
+
 	getStorageUri: function () {
 		return this._dir.slice( 0, -1 );
 	},
@@ -187,10 +200,7 @@ FileSession.extend( ILogSession, {
 			_this._loggedRecords[ record._getIndex() ] = record.getId();
 
 			var records = _this._openRecords;
-			var index = records.indexOf( record );
-			if ( index >= 0 ) {
-				records.splice( index, 1 );
-			}
+			records.splice( records.indexOf( record ), 1 );
 			if ( records.length === 0 ) {
 				_this.emit( 'Session.Idle', _this );
 			}
@@ -200,7 +210,7 @@ FileSession.extend( ILogSession, {
 
 	wait: function ( callback ) {
 
-		if ( this._openRecords.length === 0 ) {
+		if ( this.isIdle() ) {
 			process.nextTick( callback );
 			return;
 		}

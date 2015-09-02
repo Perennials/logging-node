@@ -13,7 +13,7 @@ var HttpLogger = require( './loggers/HttpLogger' );
 
 function LoggedHttpApp ( appRequest, host, port ) {
 	this._config = new Config();
-	this._log = new DeferredLog( FileLog, (function() { return [ this._config.get( 'storage.log' ) ]; }).bind( this ) );
+	this._log = new DeferredLog( FileLog, (function() { return [ this.getConfig().get( 'storage.log' ) ]; }).bind( this ) );
 	this._logSession = this._log.openSession( null, [ 'SESSION_APP_RUN' ] );
 	this._logEnv = this._logSession.openRecord( [ 'RECORD_SERVER_ENV', 'DATA_JSON' ] );
 
@@ -59,13 +59,20 @@ LoggedHttpApp.extend( HttpApp, {
 		return this._config;
 	},
 
+	setConfig: function ( config ) {
+		this._config = config;
+		return this;
+	},
+
 	// cleanup and then wait for all loggers to finish
 	onClose: function ( acallback ) {
 		var _this = this;
 
 		function callback () {
 			dontLogAnythingAnymore();
-			acallback();
+			if ( acallback instanceof Function ) {
+				acallback();
+			}
 		}
 
 		function dontLogAnythingAnymore () {

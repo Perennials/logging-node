@@ -86,6 +86,7 @@ FileLog.extend( ILogEngine, {
 				_this.emit( 'Log.Idle', _this );
 			}
 		} );
+		return session;
 	},
 
 	wait: function ( callback ) {
