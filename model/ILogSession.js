@@ -7,6 +7,7 @@ function ILogSession ( log, parentId, props, callback ) {
 	this._log = log;
 	this._id = null;
 	this._parentId = parentId;
+	this._props = props;
 }
 
 ILogSession.extend( Events.EventEmitter, {
@@ -21,6 +22,10 @@ ILogSession.extend( Events.EventEmitter, {
 
 	getParentId: function () {
 		return this._parentId;
+	},
+
+	getProps: function () {
+		return this._props;
 	},
 
 	getStorageUri: function () {},

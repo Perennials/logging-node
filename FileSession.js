@@ -195,7 +195,7 @@ FileSession.extend( ILogSession, {
 		var _this = this;
 		var record = new FileRecord( this, props, callback );
 		this._openRecords.push( record );
-		record.on( 'Record.Closed', function () {
+		record.on( 'Record.Closed', function ( err, record ) {
 
 			_this._loggedRecords[ record._getIndex() ] = record.getId();
 

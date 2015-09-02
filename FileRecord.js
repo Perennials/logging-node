@@ -100,11 +100,13 @@ FileRecord.extend( ILogRecord, {
 		this.wait( function () {
 
 			_this._stream.end();
-			_this._stream.close( function () {
+			_this._stream.close( function ( err ) {
 				
-				_this.emit( 'Record.Closed', _this );
+				_this.emit( 'Record.Closed', err, _this );
 				if ( callback instanceof Function ) {
-					process.nextTick( callback );
+					process.nextTick( function () {
+						callback( err, _this );
+					} );
 				}
 			} );
 		
