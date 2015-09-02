@@ -1,64 +1,3 @@
-Logging
-=======
-Logging module for Node.js, implementation of <https://perennial.atlassian.net/wiki/display/DV2/Logging>.
-
-The implementation is in `BETA` stage.
-
-<!-- MarkdownTOC -->
-
-- [About](#about)
-- [Installation](#installation)
-- [Example](#example)
-- [TODO](#todo)
-- [Authors](#authors)
-
-<!-- /MarkdownTOC -->
-
-
-About
------
-
-The purpose of this module is to bring consistent logging functionality across
-the Perennial services with minimal required effort from the developer, while
-still providing low level access for custom logging with output according to
-the specs.
-
-- Automatic logging of console output.
-- Automatic logging of HTTP request.
-- Automatic logging of unhandled exceptions.
-- Domain sensitive logging - all logging done in the context of an HTTP
-  request is associted with this request.
-- File writes are buffered until the file is actually opened - so nothing is
-  blocked and one can use semi-sync API without any blocking.
-- Fully async with support for deferred creation of files and directories -
-  nothing will be created until something is actually written.
-
-
-Installation
-------------
-
-```sh
-npm install https://github.com/Perennials/logging-node/tarball/master
-```
-
-
-Example
--------
-
-The module provides the [LoggedHttpApp](#loggedhttpapp) class which implements
-domain and error handling, as well as hooking of the console output and HTTP
-requests. The low level logging classes can be used separately but the
-automatic logging capabilieties will remain unused. Running this example (it
-can be found in the examples directory) and requesting `localhost:1337` will
-create log session with a bunch of records.
-
-The [LoggedHttpApp](#loggedhttpapp) class extends
-[HttpApp](https://github.com/Perennials/app-node#httpapp) of the [App
-module](https://github.com/Perennials/app-node). Check the links for
-explanation of the concept of reusing the `HttpApp` class.
-
-```js
-
 var LoggedHttpApp = require( '../LoggedHttpApp' );
 var LoggedHttpAppRequest = require( '../LoggedHttpAppRequest' );
 var FileSession = require( '../FileSession' );
@@ -143,21 +82,7 @@ app.setConfig( new Config( { storage: { log: __dirname } } ) );
 FileSession.DirectoryFormat = 'myapp-{LogSession}{SessionName}';
 
 app.startListening();
-```
 
-...some more docs here...
-
-
-TODO
-----
-
-- When hooking `http.ClientRequest` the headers are not logged.
-- When hooking `http.IncommingMessage` the body should be human readable, not
-  chuncked or compressed, but I'm not sure because for repeating the request
-  is better to have the exact replica, for human ispection and testing it
-  needs to be readable and the `content-length` needs to be adjusted.
-
-
-Authors
--------
-Borislav Peev (borislav.asdf at gmail dot com)
+// setTimeout( function () {
+// 	require( 'child_process' ).exec( 'curl localhost:1337' );
+// }, 300 );
