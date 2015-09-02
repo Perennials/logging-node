@@ -43,24 +43,37 @@ The implementation is in `BETA` stage.
 	- [FileSession](#filesession)
 		- [Methods](#methods-3)
 			- [.openRecord()](#openrecord)
+			- [.getLog()](#getlog-1)
+			- [.getId()](#getid)
+			- [.getParentId()](#getparentid)
+			- [.getProps()](#getprops)
+			- [.getStorageUri()](#getstorageuri-1)
+			- [.getOpenRecords()](#getopenrecords)
+			- [.getLoggedRecords()](#getloggedrecords)
+			- [.write()](#write)
+			- [.wait()](#wait-1)
+			- [.close()](#close)
 		- [Events](#events-1)
+			- ['Session.Opened'](#sessionopened)
+			- ['Session.Open.Error'](#sessionopenerror)
+			- ['Session.Idle'](#sessionidle)
+			- ['Session.Closed'](#sessionclosed)
 	- [FileRecord](#filerecord)
 		- [Methods](#methods-4)
-			- [Constructor](#constructor-3)
+			- [.write()](#write-1)
+			- [.getId()](#getid-1)
+			- [.getUri()](#geturi)
+			- [.wait()](#wait-2)
+			- [.close()](#close-1)
 		- [Events](#events-2)
+			- ['Record.Opened'](#recordopened)
+			- ['Record.Open.Error'](#recordopenerror)
+			- ['Record.Idle'](#recordidle)
+			- ['Record.Closed'](#recordclosed)
 	- [Deferred logging](#deferred-logging)
 		- [DeferredLog](#deferredlog)
-			- [Methods](#methods-5)
-				- [Constructor](#constructor-4)
-			- [Events](#events-3)
 		- [DeferredSession](#deferredsession)
-			- [Methods](#methods-6)
-				- [Constructor](#constructor-5)
-			- [Events](#events-4)
 		- [DeferredRecord](#deferredrecord)
-			- [Methods](#methods-7)
-				- [Constructor](#constructor-6)
-			- [Events](#events-5)
 - [TODO](#todo)
 - [Authors](#authors)
 
@@ -489,8 +502,8 @@ system's temp directory will be used as storage location.
 
 ```js
 new FileLog(
-	storageUri:String
-	callback:function( err:Error|null, log:FileLog );
+	storageUri:String,
+	callback:function( err:Error|null, log:FileLog )|undefined
 );
 ```
 
@@ -504,7 +517,7 @@ by a static property `FileSession.DirectoryFormat`.
 .openSession(
 	parentId:String|null,
 	props:Object|String[],
-	callback: function( err:Error|null, session:FileSession|null )
+	callback:function( err:Error|null, session:FileSession )|undefined
 ) : FileSession;
 ```
 
@@ -512,7 +525,7 @@ Argument | Description
 :------- | :----------
 `props` | A [list of properties or labels](#session-and-record-properties) for the session.
 `parentId` | An id of the parent log session, if any.
-`callback` | A function to be called when the session is opened and ready for use (or when error prevented this from happening).
+`callback` | A function to be notified when the session is opened and ready for use (or when an error prevented this from happening). Since a meta record will be created upon opening the session, the callback will be invoked after the record is created and if it fails the `err` argument will be populated but the `session` will be open and valid.
 
 
 ##### .getOpenSessions()
@@ -547,7 +560,7 @@ open sessions.
 
 ```js
 .wait(
-	callback:function()
+	callback:function()|undefined
 );
 ```
 
@@ -591,15 +604,200 @@ directly, but only via [LoggedHttpApp](#loggedhttpapp) and
 var FileSession = require( 'Logging/FileSession' );
 ```
 
+- [Methods](#methods-3)
+- [Events](#events-1)
+
 #### Methods
 
+- [.openRecord()](#openrecord)
+- [.getLog()](#getlog-1)
+- [.getId()](#getid)
+- [.getParentId()](#getparentid)
+- [.getProps()](#getprops)
+- [.getStorageUri()](#getstorageuri-1)
+- [.getOpenRecords()](#getopenrecords)
+- [.getLoggedRecords()](#getloggedrecords)
+- [.write()](#write)
+- [.wait()](#wait-1)
+- [.close()](#close)
+
 ##### .openRecord()
+Opens a new [FileRecord](#filerecord) in the session. The record will be writeable
+immediately but the writes will be buffered until the file is actually opened
+when they will be flushed.
+
+```js
+.openRecord(
+	props:Object|String[],
+	callback:function( err:Error|null, record:FileLog|null )|undefined
+) : FileRecord;
+```
+
+Argument | Description
+:------- | :----------
+`props` | A [list of properties or labels](#session-and-record-properties) for the record.
+`callback` | A function to be notified when the record is opened and ready for use (or when an error prevented this from happening).
+
+
+##### .getLog()
+Retrieves the file log instance associated with this session.
+
+```js
+.getLog() : FileLog;
+```
+
+
+##### .getId()
+Retrieves the id of the session. The id is the same as the directory name.
+
+```js
+.getId() : String;
+```
+
+
+##### .getParentId()
+Retrieves the parent session id, if any.
+
+```js
+.getParentId() : String|null;
+```
+
+
+##### .getProps()
+Retrieves the properties that describe the session.
+
+```js
+.getProps() : Object|String[]|null;
+```
+
+
+##### .getStorageUri()
+Retrieves the full path of the session directory.
+
+```js
+.getStorageUri() : String;
+```
+
+
+##### .getOpenRecords()
+Retrieves the list of currently open records in this session. Could be empty.
+
+```js
+.getOpenRecords() : FileRecord[];
+```
+
+
+##### .getLoggedRecords()
+Retrieves the list of past records, that is records that were closed. Could be empty.
+
+```js
+.getLoggedRecords() : String[];
+```
+
+
+##### .write()
+This is a convenience function for opening a record, writing a piece of data in it and
+closing the record. It just uses the other APIs of the class to achieve this. The `data`
+parameter is the data to be written, the other arguments are passed directly to 
+[.openRecord()](#openrecord).
+
+```js
+.write(
+	data:Buffer|String,
+	props:Object|String[],
+	callback:function( err:Error|null )|undefined
+);
+```
+
+Argument | Description
+:------- | :----------
+`props` | A [list of properties or labels](#session-and-record-properties) for the record.
+`callback` | A function to be notified when the record is opened and ready for use (or when an error prevented this from happening).
+
+
+##### .wait()
+Notifies the specified callback when the session becomes idle, that is when
+there are no more open records. If there are no open records the callback will
+be called immediately (upon next tick).
+
+```js
+.wait(
+	callback:function()|undefined
+);
+```
+
+
+##### .close()
+Closes the session. The session will not be closed while there are still open
+records and they will not be forcefully closed. This module will close
+everything opened by it when the application is closed, but the user is
+responsible for closing any records he/she opened manually. This function will
+actually invoke `.wait()` and continue when all the records are closed.
+
+```js
+.close(
+	callback:function( err:Error|null, session:FileSession )|undefined
+);
+```
+
 
 #### Events
 
+- ['Session.Opened'](#sessionopened)
+- ['Session.Open.Error'](#sessionopenerror)
+- ['Session.Idle'](#sessionidle)
+- ['Session.Closed'](#sessionclosed)
+
+##### 'Session.Opened'
+Emitted when the session is successfully opened and ready for use. Since a
+'meta' record will be created upon opening the session, the callback will be
+invoked after the record is created and if it fails the `err` argument will be
+populated but the `session` will be open and valid.
+
+```js
+function (
+	err:Error|null,
+	session:FileSession
+);
+```
+
+
+##### 'Session.Open.Error'
+Emitted if an error prevented the session from opening.
+
+```js
+function (
+	err:Error|null,
+	session:FileSession
+);
+```
+
+
+##### 'Session.Idle'
+Emitted every time the last open record of this session is closed.
+
+```js
+function (
+	session:FileSession
+);
+```
+
+
+##### 'Session.Closed'
+Emitted after the session was closed. Since a 'close' record will be created
+upon closing the session, the callback will be invoked after the record is
+created and if it fails the `err` argument will be populated but the `session`
+will still be closed.
+
+```js
+function (
+	err:Error|null,
+	session:FileSession
+);
+```
+
 
 ### FileRecord
-
 This class is part of the low-level API and normally shouldn't be used
 directly, but only via [LoggedHttpApp](#loggedhttpapp) and
 [LoggedHttpAppRequest](#loggedhttpapprequest).
@@ -610,9 +808,111 @@ var FileRecord = require( 'Logging/FileRecord' );
 
 #### Methods
 
-##### Constructor
+- [.write()](#write-1)
+- [.getId()](#getid-1)
+- [.getUri()](#geturi)
+- [.wait()](#wait-2)
+- [.close()](#close-1)
+
+##### .write()
+Writes a chunk of data in the file and notifies a callback when the data is
+flushed to the disk.
+
+```js
+.write(
+	data:Buffer|String,
+	callback:function( err:Error|null )|undefined
+);
+```
+
+##### .getId()
+Retrieves the id of the record, it is the same as the file name within the
+session directory.
+
+```js
+.getId() : String;
+```
+
+
+##### .getUri()
+Retrieves the full path of the underlying file of this record.
+
+```js
+.getUri() : String;
+```
+
+
+##### .wait()
+Notifies the specified callback when the record becomes idle, that is when all
+data from previous writes is flushed to the disk. If there are no pending
+writes the callback will be called immediately (upon next tick).
+
+```js
+.wait(
+	callback:function()|undefined
+);
+```
+
+##### .close()
+Closes the record. The user is responsible for closing all manually open
+records. Not closing them may result in the inability to close the application
+and waiting forever.
+
+```js
+.close(
+	callback:function( err:Error|null, record:FileRecord )|undefined
+);
+```
 
 #### Events
+
+- ['Record.Opened'](#recordopened)
+- ['Record.Open.Error'](#recordopenerror)
+- ['Record.Idle'](#recordidle)
+- ['Record.Closed'](#recordclosed)
+
+##### 'Record.Opened'
+Emitted when the record is successfully opened and ready for use.
+
+```js
+function (
+	err:Error|null,
+	record:FileRecord
+);
+```
+
+
+##### 'Record.Open.Error'
+Emitted if an error prevented the record from opening.
+
+```js
+function (
+	err:Error|null,
+	record:FileRecord
+);
+```
+
+
+##### 'Record.Idle'
+Emitted every time the last chunk of data queued to be written is flushed
+to the disk.
+
+```js
+function (
+	record:FileRecord
+);
+```
+
+
+##### 'Record.Closed'
+Emitted after the record was closed.
+
+```js
+function (
+	err:Error|null,
+	record:FileRecord
+);
+```
 
 
 ### Deferred logging
@@ -626,7 +926,7 @@ purposes:
    and file records, the deferred sessions and records can be used immediately
    after the object is constructed and there is no need to wait for a ready
    callback. Operations will buffered and will be flushed to the disk as soon
-   as the file is opened.
+   as the directory is created or the file is opened.
 2. To reduce clutter and improve performance - opening a deferred session or
    deferred record will not actually write anything to the disk until the
    first time some data is written in a deferred record. After the first write
@@ -649,16 +949,14 @@ This class is part of the low-level API and normally shouldn't be used
 directly, but only via [LoggedHttpApp](#loggedhttpapp) and
 [LoggedHttpAppRequest](#loggedhttpapprequest).
 
+This class exposes the same methods and events as the [FileLog](#filelog),
+except for `.getStorageUri()`. All callbacks and events will receive
+references to the `DeferredLog` and the wrapped `FileLog` can be accessed via
+`.getLog()` method. One should refer to the documentation of `FileSession`.
+
 ```js
 var DeferredLog = require( 'Logging/DeferredLog' );
 ```
-
-##### Methods
-
-###### Constructor
-
-##### Events
-
 
 
 #### DeferredSession
@@ -667,15 +965,14 @@ This class is part of the low-level API and normally shouldn't be used
 directly, but only via [LoggedHttpApp](#loggedhttpapp) and
 [LoggedHttpAppRequest](#loggedhttpapprequest).
 
+This class exposes the same methods and events as the
+[FileSession](#filesession). All callbacks and events will receive references
+to the `DeferredSession` and the wrapped `FileSession` can be accessed via
+`.getLogSession()` method. One should refer to the documentation of `FileSession`.
+
 ```js
 var DeferredSession = require( 'Logging/DeferredSession' );
 ```
-
-##### Methods
-
-###### Constructor
-
-##### Events
 
 
 #### DeferredRecord
@@ -684,15 +981,15 @@ This class is part of the low-level API and normally shouldn't be used
 directly, but only via [LoggedHttpApp](#loggedhttpapp) and
 [LoggedHttpAppRequest](#loggedhttpapprequest).
 
+This class exposes the same methods and events as the
+[FileRecord](#filerecord). All callbacks and events will receive references to
+the `DeferredRecord` and the wrapped `FileRecord` can be accessed via
+`.getLogRecord()` method. One should refer to the documentation of `FileRecord`.
+
 ```js
 var DeferredRecord = require( 'Logging/DeferredRecord' );
 ```
 
-##### Methods
-
-###### Constructor
-
-##### Events
 
 TODO
 ----
@@ -702,6 +999,10 @@ TODO
   chunked or compressed, but I'm not sure because for repeating the request
   is better to have the exact replica, for human inspection and testing it
   needs to be readable and the `content-length` needs to be adjusted.
+- Would be cool to document everything precisely, including the interfaces and
+  the deferred classes. Also the logic of the deferred classes is slightly
+  different and they don't emit the `.Open.Error` event, which could cause
+  problems.
 
 
 Authors
