@@ -1003,6 +1003,9 @@ TODO
   the deferred classes. Also the logic of the deferred classes is slightly
   different and they don't emit the `.Open.Error` event, which could cause
   problems.
+- Split docs into different files? This one is too long.
+- Keep memory stats somehow?
+- Keep timings of the requests.
 
 
 Authors
