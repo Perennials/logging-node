@@ -1004,6 +1004,9 @@ TODO
   different and they don't emit the `.Open.Error` event, which could cause
   problems.
 - Split docs into different files? This one is too long.
+- Be able to configure how much stuff to log. For Perennial services
+  everything should be logged, but for example for generic tool like sync
+  scripts or something only debug information should be logged.
 - Keep memory stats somehow?
 - Keep timings of the requests.
 
