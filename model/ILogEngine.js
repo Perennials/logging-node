@@ -192,6 +192,10 @@ ILogEngine.defineStatic( {
 			}
 		}
 
+		if ( props === undefined || props === null ) {
+			props = {};
+		}
+
 		if ( Object.isObject( props ) && defaults ) {
 
 			for ( var key in defaults ) {
