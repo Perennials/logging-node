@@ -1009,6 +1009,11 @@ TODO
   scripts or something only debug information should be logged.
 - Keep memory stats somehow?
 - Keep timings of the requests.
+- Https requests are not logged.
+- The deferred api should be the same as the real one. Meaning open event in
+  the ctor together with the callback and different event for real open.
+- Enforce charset in log names.
+
 
 
 Authors
