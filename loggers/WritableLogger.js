@@ -10,7 +10,9 @@ function WritableLogger ( src, dest ) {
 	this._srcEnd = src.end;
 	src.write = this._writeHook.bind( this );
 	src.end = this._endHook.bind( this );
-
+	src.on( 'close', function () {
+		dest.close();
+	} );
 }
 
 WritableLogger.define( {
