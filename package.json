@@ -1,7 +1,7 @@
 {
 	"name": "Logging",
 	"description": "Logging module Node.js",
-	"version": "0.9.1",
+	"version": "0.9.0",
 	"author": "Borislav Peev <borislav.asdf@gmail.com>",
 	"engine": [
 		"node >= 4.0.0"
@@ -11,10 +11,10 @@
 	},
 	"dependencies": {
 		"Prototype": "https://github.com/perennials/prototype-js/tarball/master",
-		"App": "https://github.com/perennials/app-node/tarball/master",
-		"Net": "https://github.com/perennials/net-node/tarball/master"
+		"App": "https://github.com/perennials/app-node/tarball/master"
 	},
 	"devDependencies": {
+		"Net": "https://github.com/perennials/net-node/tarball/master",
 		"Unitest": "https://github.com/perennials/unitest-js/tarball/master",
 		"shelljs": "*"
 	},
