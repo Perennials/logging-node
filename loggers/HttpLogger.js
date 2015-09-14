@@ -26,6 +26,8 @@ HttpLogger.define( {
 	// make sure we got the socket before everyone else so we can intercept the headers
 	_onSocket: function ( socket ) {
 
+		// no way to assign the logsession to the socket via http.request() before any writes happen, so use globals
+		// this will be called before http.request() returns
 		if ( _lastClientRq !== null ) {
 			// the end hook here is taking care to close() the record
 			new WritableLogger( socket, _lastClientRq.LogSession.openRecord( _lastClientRq.LogRecord.RequestProps ) );
