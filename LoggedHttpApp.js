@@ -1,3 +1,5 @@
+"use strict";
+
 var HttpApp = require( 'App/HttpApp' );
 var Config = require( 'App/Config' );
 var LoggedHttpAppRequest = require( './LoggedHttpAppRequest' );
@@ -11,34 +13,37 @@ var Os = require( 'os' );
 var ConsoleLogger = require( './loggers/ConsoleLogger' );
 var HttpLogger = require( './loggers/HttpLogger' );
 
-function LoggedHttpApp ( appRequest, host, port ) {
-	this._config = new Config();
-	this._log = new DeferredLog( FileLog, (function() { return [ this.getConfig().get( 'storage.log' ) ]; }).bind( this ) );
-	this._logSession = this._log.openSession( null, [ 'SESSION_APP_RUN' ] );
-	this._logEnv = this._logSession.openRecord( [ 'RECORD_SERVER_ENV', 'DATA_JSON' ] );
+class LoggedHttpApp extends HttpApp {
 
-	var _this = this;
-	this._logSession.once( 'Session.Opened', function ( err, session ) {
-		LoggedHttpApp.logServerEnv( _this._logEnv );
-		_this._logEnv.close();
-		_this._logEnv = null;
-	} );
+	constructor ( appRequest, host, port ) {
+		
+		super( appRequest || LoggedHttpAppRequest, host, port )
+		
+		this._config = new Config();
+		this._log = new DeferredLog( FileLog, (function() { return [ this.getConfig().get( 'storage.log' ) ]; }).bind( this ) );
+		this._logSession = this._log.openSession( null, [ 'SESSION_APP_RUN' ] );
+		this._logEnv = this._logSession.openRecord( [ 'RECORD_SERVER_ENV', 'DATA_JSON' ] );
 
-	// hijack stdout/stderr so all console.log() and similar can be intercepted
-	this._consoleLogger = new ConsoleLogger( this._logSession );
-	// hijack the http module
-	this._httpLogger = new HttpLogger( this._logSession );
+		var _this = this;
+		this._logSession.once( 'Session.Opened', function ( err, session ) {
+			LoggedHttpApp.logServerEnv( _this._logEnv );
+			_this._logEnv.close();
+			_this._logEnv = null;
+		} );
 
-	HttpApp.call( this, appRequest || LoggedHttpAppRequest, host, port )
-}
+		// hijack stdout/stderr so all console.log() and similar can be intercepted
+		this._consoleLogger = new ConsoleLogger( this._logSession );
+		// hijack the http module
+		this._httpLogger = new HttpLogger( this._logSession );
 
-LoggedHttpApp.extend( HttpApp, {
+	}
 
-	getLog: function () {
+	getLog () {
 		return this._log;
-	},
+	}
+	
 
-	getLogSession: function ( callback ) {
+	getLogSession ( callback ) {
 		var _this = this;
 		var session = this._logSession;
 		if ( !session.isEmpty() && session.getLogSession() === null ) {
@@ -53,19 +58,22 @@ LoggedHttpApp.extend( HttpApp, {
 				callback( null, _this._logSession );
 			} );
 		}
-	},
+	}
+	
 
-	getConfig: function () {
+	getConfig () {
 		return this._config;
-	},
+	}
+	
 
-	setConfig: function ( config ) {
+	setConfig ( config ) {
 		this._config = config;
 		return this;
-	},
+	}
+	
 
 	// cleanup and then wait for all loggers to finish
-	onClose: function ( acallback ) {
+	onClose ( acallback ) {
 		var _this = this;
 
 		function callback () {
@@ -83,7 +91,7 @@ LoggedHttpApp.extend( HttpApp, {
 		}
 
 		// close the server and when this is done
-		HttpApp.prototype.onClose.call( this, function () {
+		super.onClose( function () {
 
 			//if we haven't written anything yet don't attempt to open files in the middle of the closing process
 			if ( _this._log.isEmpty() === true ) {
@@ -117,11 +125,7 @@ LoggedHttpApp.extend( HttpApp, {
 		} );
 	}
 
-} );
-
-LoggedHttpApp.defineStatic( {
-
-	logServerEnv: function ( dest ) {
+	static logServerEnv ( dest ) {
 		// log the server environment
 		var env = {
 			process: {
@@ -160,11 +164,11 @@ LoggedHttpApp.defineStatic( {
 			dest.write( env, [ 'RECORD_SERVER_ENV', 'DATA_JSON' ] );
 		}
 		else {
-			props = dest.getProps();
+			var props = dest.getProps();
 			dest.write( ILogEngine.normalizeData( env, props ) );
 		}
 	}
 
-} );
+}
 
 module.exports = LoggedHttpApp;

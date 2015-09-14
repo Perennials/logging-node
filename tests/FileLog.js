@@ -22,14 +22,19 @@ UnitestA( 'FileLog()', function ( test ) {
 	new FileLog( null, function ( err, log ) {
 		test( err );
 		test( log instanceof FileLog );
-		// at least on OSX 10.10 the tmpdir includes trailing slash
-		test.eq( log.getStorageUri(), require( 'os' ).tmpdir() );
+		//node < 4
+		var tmpdir = require( 'os' ).tmpdir();
+		if ( tmpdir.endsWith( Path.sep ) ) {
+			tmpdir = tmpdir.slice( 0, -1 );
+		}
+		///
+		test.eq( log.getStorageUri(), tmpdir );
 		test.out();
 	} );
 } );
 
 UnitestA( 'FileLog.openSession()', function ( test ) {
-	var dir = __dirname + Path.sep + 'testlogs' + Path.sep;
+	var dir = __dirname + Path.sep + 'testlogs';
 	mkdir( '-p', dir );
 	test( Fs.existsSync( dir ) );
 

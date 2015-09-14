@@ -12,6 +12,7 @@ var FileLog = null;
 function FileSession ( log, parentId, props, callback ) {
 
 	ILogSession.call( this, log, parentId, props, callback );
+	             /// this is not in ILogEngine so not in DeferredLog
 	this._dir = ( log instanceof DeferredLog ? log.getLog().getStorageUri() : log.getStorageUri() );
 	this._fileCount = 0;
 	this._openRecords = [];
@@ -56,7 +57,7 @@ function FileSession ( log, parentId, props, callback ) {
 			return;
 		}
 
-		_this._dir += dirName + Path.sep;
+		_this._dir += Path.sep + dirName;
 		_this._id = id;
 
 		// dependencies, ah
@@ -95,7 +96,7 @@ FileSession.extend( ILogSession, {
 
 		var id = _num.toString( 36 );
 		var dirName = fileName.replace( '{LogSession}', id ).replace( '{SessionName}', sessionName );
-		var path = this._dir + dirName;
+		var path = this._dir + Path.sep + dirName;
 		
 		var _this = this;
 
@@ -146,7 +147,7 @@ FileSession.extend( ILogSession, {
 	},
 
 	getStorageUri: function () {
-		return this._dir.slice( 0, -1 );
+		return this._dir;
 	},
 
 	getLoggedRecords: function () {
@@ -220,7 +221,7 @@ FileSession.extend( ILogSession, {
 
 } ).implement( ILogSession );
 
-FileSession.defineStatic( {
+FileSession.static( {
 
 	DirectoryFormat: '{LogSession}{SessionName}',
 

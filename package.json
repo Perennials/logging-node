@@ -4,7 +4,7 @@
 	"version": "0.9.1",
 	"author": "Borislav Peev <borislav.asdf@gmail.com>",
 	"engine": [
-		"node >= 0.10"
+		"node >= 4.0.0"
 	],
 	"scripts": {
 		"test": "node ./tests/tests.js"

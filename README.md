@@ -994,7 +994,6 @@ var DeferredRecord = require( 'Logging/DeferredRecord' );
 TODO
 ----
 
-- When hooking `http.ClientRequest` the headers are not logged.
 - When hooking `http.IncommingMessage` the body should be human readable, not
   chunked or compressed, but I'm not sure because for repeating the request
   is better to have the exact replica, for human inspection and testing it
@@ -1009,10 +1008,8 @@ TODO
   scripts or something only debug information should be logged.
 - Keep memory stats somehow?
 - Keep timings of the requests.
-- Https requests are not logged.
 - The deferred api should be the same as the real one. Meaning open event in
   the ctor together with the callback and different event for real open.
-- Enforce charset in log names.
 
 
 

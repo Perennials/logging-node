@@ -22,9 +22,11 @@ function FileLog ( storageUri, callback ) {
 	Fs.stat( storageUri, function ( err, stats ) {
 		if ( err || !stats.isDirectory() ) {
 			_this._dir = Os.tmpdir();
-			if ( !_this._dir.endsWith( Path.sep ) ) {
-				_this._dir += Path.sep;
+			// node < 4
+			if ( _this._dir.endsWith( Path.sep ) ) {
+				_this._dir = _this._dir.slice( 0, -1 );
 			}
+			////
 			_this.emit( 'Log.Opened', err, _this );
 			if ( callback instanceof Function ) {
 				process.nextTick( function () {
@@ -40,9 +42,11 @@ function FileLog ( storageUri, callback ) {
 				else {
 					_this._dir = resolvedPath;
 				}
-				if ( !_this._dir.endsWith( Path.sep ) ) {
-					_this._dir += Path.sep;
+				// node < 4
+				if ( _this._dir.endsWith( Path.sep ) ) {
+					_this._dir = _this._dir.slice( 0, -1 );
 				}
+				////
 				_this.emit( 'Log.Opened', err, _this );
 				if ( callback instanceof Function ) {
 					process.nextTick( function () {
@@ -101,7 +105,7 @@ FileLog.extend( ILogEngine, {
 
 } ).implement( ILogEngine );
 
-FileLog.defineStatic( {
+FileLog.static( {
 
 	LogSessionClass: FileSession,
 

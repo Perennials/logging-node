@@ -8,42 +8,44 @@ var WritableLogger  = require( './loggers/WritableLogger' );
 var ConsoleLogger  = require( './loggers/ConsoleLogger' );
 var LoggedHttpApp = null;
 
-function LoggedHttpAppRequest ( app, req, res ) {
-	
-	var _this = this;
+class LoggedHttpAppRequest extends HttpAppRequest {
 
-	this.LogSession = app.getLog().openSession( req.headers[ 'freedom2-debug-logsession' ], [ 'SESSION_SERVER_REQUEST' ] );
+	constructor ( app, req, res ) {
+		
+		super( app, req, res );
 
-	// log the server environment
-	LoggedHttpApp = LoggedHttpApp || require( './LoggedHttpApp' );
-	LoggedHttpApp.logServerEnv( this.LogSession );
-	
-	// log req
-	new IncomingMessageLogger( req, this.LogSession.openRecord( [ 'RECORD_SERVER_REQUEST', 'DATA_TEXT' ] ) );
+		this.Domain.HttpAppRequest = this;
+		
+		var _this = this;
 
-	// log res
-	new WritableLogger( res, this.LogSession.openRecord( [ 'RECORD_SERVER_RESPONSE', 'DATA_TEXT' ] ) );
+		this.LogSession = app.getLog().openSession( req.headers[ 'freedom2-debug-logsession' ], [ 'SESSION_SERVER_REQUEST' ] );
 
-	// defer all log streams - open them on the first write
-	// stdout and stderr are hooked in the LoggedHttpApp class and the call is redirected to the current domain
-	this.LogStreams = {
-		Stdout: this.LogSession.openRecord( [ 'STDOUT', 'RECORD_STREAM', 'DATA_TEXT' ] ),
-		Stderr: this.LogSession.openRecord( [ 'STDERR', 'RECORD_STREAM', 'DATA_TEXT' ] ),
-	};	
+		// log the server environment
+		LoggedHttpApp = LoggedHttpApp || require( './LoggedHttpApp' );
+		LoggedHttpApp.logServerEnv( this.LogSession );
+		
+		// log req
+		new IncomingMessageLogger( req, this.LogSession.openRecord( [ 'RECORD_SERVER_REQUEST', 'DATA_TEXT' ] ) );
 
-	HttpAppRequest.call( this, app, req, res );
-	this.Domain.HttpAppRequest = this;
+		// log res
+		new WritableLogger( res.connection, this.LogSession.openRecord( [ 'RECORD_SERVER_RESPONSE', 'DATA_TEXT' ] ) );
 
-}
+		// defer all log streams - open them on the first write
+		// stdout and stderr are hooked in the LoggedHttpApp class and the call is redirected to the current domain
+		this.LogStreams = {
+			Stdout: this.LogSession.openRecord( [ 'STDOUT', 'RECORD_STREAM', 'DATA_TEXT' ] ),
+			Stderr: this.LogSession.openRecord( [ 'STDERR', 'RECORD_STREAM', 'DATA_TEXT' ] ),
+		};	
 
-LoggedHttpAppRequest.extend( HttpAppRequest, {
 
-	onError: function ( err ) {
+	}
+
+	onError ( err ) {
 		this.LogSession.write( err, [ 'RECORD_EXCEPTION', 'DATA_TEXT' ] );
-		HttpAppRequest.prototype.onError.call( this, err );
-	},
+		super.onError( err );
+	}
 
-	dispose: function () {
+	dispose () {
 
 		for ( var steamName in this.LogStreams ) {
 			this.LogStreams[ steamName ].close();
@@ -51,9 +53,9 @@ LoggedHttpAppRequest.extend( HttpAppRequest, {
 
 		this.LogSession.close();
 	
-		HttpAppRequest.prototype.dispose.call( this );
+		super.dispose();
 	}
 
-} );
+} 
 
 module.exports = LoggedHttpAppRequest;

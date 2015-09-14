@@ -14,7 +14,7 @@ ILogEngine.extend( Events.EventEmitter, {
 	wait: function ( callback ) {}
 } );
 
-ILogEngine.defineStatic( {
+ILogEngine.static( {
 	
 	// predefined "labels", i.e. key-value pairs
 	DATA_BINARY: {
@@ -207,6 +207,10 @@ ILogEngine.defineStatic( {
 
 		}
 
+		if ( String.isString( props.Name ) ) {
+			props.Name = props.Name.replace( /[^a-zA-Z0-9_]/g, '_' );
+		}
+
 		return props;
 	},
 
@@ -227,7 +231,7 @@ ILogEngine.defineStatic( {
 	}
 } );
 
-ILogEngine.defineStatic( {
+ILogEngine.static( {
 	DefaultRecordProps: {
 		RecordType: ILogEngine.RECORD_GENERIC.Value,
 		DataType: ILogEngine.DATA_BINARY.Value

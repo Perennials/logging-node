@@ -1,3 +1,5 @@
+"use strict";
+
 var LoggedHttpApp = require( '../LoggedHttpApp' );
 var FileSession = require( '../FileSession' );
 var LoggedHttpAppRequest = require( '../LoggedHttpAppRequest' );
@@ -99,20 +101,17 @@ UnitestA( 'SESSION_APP_RUN logs upon console.log()', function ( test ) {
 
 UnitestA( 'LoggedHttpAppRequest logging', function ( test ) {
 
-	function TestAppRequest ( app, req, res ) {
-		LoggedHttpAppRequest.call( this, app, req, res );
-	}
+	class TestAppRequest extends LoggedHttpAppRequest {
 
-	TestAppRequest.extend( LoggedHttpAppRequest, {
-		onHttpContent: function ( content ) {
+		onHttpContent ( content ) {
 			console.log( 'asd' );
 			console.error( 'qwe' );
 			setTimeout( function () {
 				throw new Error( '1' );
 			}, 100 );
-		},
+		}
 
-		onError: function ( err ) {
+		onError ( err ) {
 			// if ( global.errored ) {
 			// 	return;
 			// }
@@ -134,7 +133,7 @@ UnitestA( 'LoggedHttpAppRequest logging', function ( test ) {
 						test.eq( 'asd\n', Fs.readFileSync( _this.LogSession.getStorageUri() + '/' + _this.LogSession.getLoggedRecords()[ 3 ], { encoding: 'utf8' } ) );
 						test.eq( 'qwe\n', Fs.readFileSync( _this.LogSession.getStorageUri() + '/' + _this.LogSession.getLoggedRecords()[ 4 ], { encoding: 'utf8' } ) );
 						//test the server response was logged
-						test.eq( '123456', Fs.readFileSync( _this.LogSession.getStorageUri() + '/' + _this.LogSession.getLoggedRecords()[ 5 ], { encoding: 'utf8' } ) );
+						test( Fs.readFileSync( _this.LogSession.getStorageUri() + '/' + _this.LogSession.getLoggedRecords()[ 5 ], { encoding: 'utf8' } ).indexOf( '3\r\n123\r\n3\r\n456\r\n0\r\n' ) > 0 );
 						
 
 						app1.getLogSession( function ( err, session ) {
@@ -152,7 +151,7 @@ UnitestA( 'LoggedHttpAppRequest logging', function ( test ) {
 				} );
 			} );
 		}
-	} );
+	}
 
 	var app1 = new LoggedHttpApp( TestAppRequest, '127.0.0.1', 55555 );
 	var cfg = app1.getConfig();
