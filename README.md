@@ -994,6 +994,7 @@ var DeferredRecord = require( 'Logging/DeferredRecord' );
 TODO
 ----
 
+- Update to Specs 0.10.
 - There should be a flag if to log HTTP messages in human format or mirror.
   Human means to remove the chunked encoding and unzip before writing to the file.
 - Would be cool to document everything precisely, including the interfaces and
