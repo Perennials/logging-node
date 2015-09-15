@@ -222,10 +222,21 @@ ILogEngine.static( {
 			
 			data = data.stack;
 		}
-		else if ( data instanceof Object &&
-			 props.DataType == ILogEngine.DATA_JSON.Value ) {
-			
-			data = JSON.stringify( data );
+		else if ( data instanceof Object ) {
+			if ( props.DataType == ILogEngine.DATA_JSON.Value ) {
+				data = JSON.stringify( data );
+			}
+			else if (
+			     props.DataType == ILogEngine.DATA_TEXT.Value ||
+			     props.DataType == ILogEngine.DATA_BINARY.Value ) {
+				
+				if ( data.toString instanceof Function ) {
+					data = data.toString();
+				}
+				else {
+					data = Object.prototype.toString.call( data );
+				}
+			}
 		}
 		return data;
 	}

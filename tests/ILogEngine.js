@@ -23,3 +23,9 @@ Unitest( 'ILogEngine.labelsToProps()', function ( test ) {
 	test.eq( ILogEngine.labelsToProps( { a: 1, b: 2 } ), { a: 1, b: 2 } );
 	test.eq( ILogEngine.labelsToProps( [ 'RECORD_META', 'DATA_JSON' ] ), { RecordType: ILogEngine.RECORD_META.Value, DataType: ILogEngine.DATA_JSON.Value } );
 } );
+
+Unitest( 'ILogEngine.normalizeData()', function ( test ) {
+	test.eq( ILogEngine.normalizeData( { a: 1, b: 2 }, { DataType: 'JSON' } ), '{"a":1,"b":2}' );
+	test.eq( ILogEngine.normalizeData( { a: 1, b: 2 }, { DataType: 'TEXT' } ), '[object Object]' );
+	test.eq( ILogEngine.normalizeData( { a: 1, b: 2 }, { DataType: 'BINARY' } ), '[object Object]' );
+} );
