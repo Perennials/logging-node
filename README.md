@@ -1016,19 +1016,21 @@ TODO
 
 - There should be a flag if to log HTTP messages in human format or mirror.
   Human means to remove the chunked encoding and unzip before writing to the file.
+- Keep memory stats somehow?
+- Keep timings of the requests.
+&nbsp;  
+- Be able to configure how much stuff to log. For Perennial services
+  everything should be logged, but for example for generic tool like sync
+  scripts or something only debug information should be logged.
+&nbsp;  
+- The deferred api should be the same as the real one. Meaning open event in
+  the ctor together with the callback and different event for real open.
+&nbsp;  
 - Would be cool to document everything precisely, including the interfaces and
   the deferred classes. Also the logic of the deferred classes is slightly
   different and they don't emit the `.Open.Error` event, which could cause
   problems.
 - Split docs into different files? This one is too long.
-- Be able to configure how much stuff to log. For Perennial services
-  everything should be logged, but for example for generic tool like sync
-  scripts or something only debug information should be logged.
-- Keep memory stats somehow?
-- Keep timings of the requests.
-- The deferred api should be the same as the real one. Meaning open event in
-  the ctor together with the callback and different event for real open.
-
 
 
 Authors
