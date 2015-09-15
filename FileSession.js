@@ -167,6 +167,8 @@ FileSession.extend( ILogSession, {
 		
 		this.wait( function () {
 			
+			_this._closed = true;
+			
 			var meta = {
 				TimeStamp: (new Date()).toISOString()
 			};
@@ -174,8 +176,6 @@ FileSession.extend( ILogSession, {
 			var props = ILogEngine.labelsToProps( [ 'RECORD_CLOSE', 'DATA_JSON' ] );
 
 			_this.write( meta, props, function ( err ) {
-
-				_this._closed = true;
 
 				_this.emit( 'Session.Closed', err, _this );
 

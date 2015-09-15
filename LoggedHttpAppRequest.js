@@ -47,13 +47,17 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 
 	dispose () {
 
-		for ( var steamName in this.LogStreams ) {
-			this.LogStreams[ steamName ].close();
+		if ( this.Domain ) {
+
+			for ( var steamName in this.LogStreams ) {
+				this.LogStreams[ steamName ].close();
+			}
+
+			this.LogSession.close();
+		
+			super.dispose();
 		}
 
-		this.LogSession.close();
-	
-		super.dispose();
 	}
 
 } 
