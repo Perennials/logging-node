@@ -18,7 +18,7 @@ The implementation is in `BETA` stage.
 			- [Constructor](#constructor)
 			- [.getLog()](#getlog)
 			- [.getLogSession()](#getlogsession)
-			- [.setConfig() / .getConfig()](#setconfig--getconfig)
+			- [.setStorageDir() / .getStorageDir()](#setstoragedir--getstoragedir)
 			- [.onClose()](#onclose)
 		- [Logging HTTP requests](#logging-http-requests)
 			- [Disabling the logging of a specific request](#disabling-the-logging-of-a-specific-request)
@@ -123,34 +123,34 @@ module](https://github.com/Perennials/app-node). Check the links for
 explanation of the concept of reusing the `HttpApp` class.
 
 ```js
+"use strict"
 
 var LoggedHttpApp = require( 'Logging/LoggedHttpApp' );
 var LoggedHttpAppRequest = require( 'Logging/LoggedHttpAppRequest' );
 var FileSession = require( 'Logging/FileSession' );
-var Config = require( 'App/Config' );
 
 // this will be instantiated by LoggedHttpApp whenever we have a new request coming in
-function MyAppRequest ( app, req, res ) {
-	// call the parent constructor
-	LoggedHttpAppRequest.call( this, app, req, res );
+class MyAppRequest extends LoggedHttpAppRequest {
 
-	// open a log stream, that is file, in which we can write data
-	// don't forget to close it or our app will not close
-	this._logStream = this.LogSession.openRecord( [ 'RECORD_STREAM', 'DATA_XML' ] );
-	this._logStream.write( '<log>\n' );
+	constructor ( app, req, res ) {
+		// call the parent constructor
+		super( app, req, res );
 
-}
+		// open a log stream, that is file, in which we can write data
+		// don't forget to close it or our app will not close
+		this._logStream = this.LogSession.openRecord( [ 'RECORD_STREAM', 'DATA_XML' ] );
+		this._logStream.write( '<log>\n' );
 
-MyAppRequest.extend( LoggedHttpAppRequest, {
+	}
 
 	// make sure we clean what we have opened
 	// logsession will not be closed properly if we have open streams
-	cleanup: function () {
+	cleanup () {
 		this._logStream.write( '</log>' );
 		this._logStream.close();
-	},
+	}
 	
-	onError: function ( err ) {
+	onError ( err ) {
 
 		// log some line in our stream
 		this._logStream.write( '<ERROR>Unhandled error "' + err.message + '"</ERROR>\n' );
@@ -167,11 +167,11 @@ MyAppRequest.extend( LoggedHttpAppRequest, {
 
 		// call the default handler, which will log the error and abort the app
 		LoggedHttpAppRequest.prototype.onError.call( this, err );
-	},
+	}
 
 
 	// this will be called when we have the whole http request
-	onHttpContent: function ( content ) {
+	onHttpContent ( content ) {
 
 		// log some line in our stream
 		this._logStream.write( '<INFO>HTTP request received</INFO>\n' );
@@ -195,14 +195,14 @@ MyAppRequest.extend( LoggedHttpAppRequest, {
 		} );
 
 	}
-} );
+}
 
 
 // construct a new HttpApp, tell it our request class is MyAppRequest
 var app = new LoggedHttpApp( MyAppRequest, '0.0.0.0', 1337 );
 
-// log sessions will be written in the directory pointed by 'storage.log', or the temp directory
-app.setConfig( new Config( { storage: { log: __dirname } } ) );
+// log sessions will be written in this directory, or the temp directory
+app.setStorageDir( __dirname );
 
 // we can customize the session directory naming
 FileSession.DirectoryFormat = 'myapp-{LogSession}{SessionName}';
@@ -288,7 +288,7 @@ var LoggedHttpApp = require( 'Logging/LoggedHttpApp' );
 - [Constructor](#constructor)
 - [.getLog()](#getlog)
 - [.getLogSession()](#getlogsession)
-- [.setConfig() / .getConfig()](#setconfig--getconfig)
+- [.setStorageDir() / .getStorageDir()](#setstoragedir--getstoragedir)
 - [.onClose()](#onclose)
 
 
@@ -305,8 +305,9 @@ The constructor will create a [DeferredLog](#deferredlog) and
 outside the context of an HTTP request (i.e.
 [LoggedHttpAppRequest](#loggedhttpapprequest)) will be saved in this session.
 The session directory will only be created if any data is actually logged. It
-will be created in the location pointed by the config entry named
-`storage.log`, or default to the system's temp directory.
+will be created in the location pointed by
+[.setStorageDir()](#setstoragedir--getstoragedir), or default to the system's
+temp directory.
 
 **Remarks:** Upon constructing an instance all console output and HTTP
 requests will be hooked. The side effect of this is that two instances of this
@@ -340,17 +341,16 @@ Retrieves the log session associated with the application.
 ```
 
 
-##### .setConfig() / .getConfig()
-Sets the config associated with the application. It is
-[Config](https://github.com/Perennials/app-node#config) from the the [App
-module](https://github.com/Perennials/app-node).
+##### .setStorageDir() / .getStorageDir()
+Determines where logs are to be stored. This is passed to the underlying
+`FileLog` and must be called before any logs are written.
 
 ```js
-.setConfig(
-	config:Config
+.setStorageDir(
+	dir:String
 ) : this;
 
-.getConfig() : Config;
+.getStorageDir() : String|null;
 ```
 
 
@@ -994,10 +994,8 @@ var DeferredRecord = require( 'Logging/DeferredRecord' );
 TODO
 ----
 
-- When hooking `http.IncommingMessage` the body should be human readable, not
-  chunked or compressed, but I'm not sure because for repeating the request
-  is better to have the exact replica, for human inspection and testing it
-  needs to be readable and the `content-length` needs to be adjusted.
+- There should be a flag if to log HTTP messages in human format or mirror.
+  Human means to remove the chunked encoding and unzip before writing to the file.
 - Would be cool to document everything precisely, including the interfaces and
   the deferred classes. Also the logic of the deferred classes is slightly
   different and they don't emit the `.Open.Error` event, which could cause

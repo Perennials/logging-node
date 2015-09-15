@@ -19,8 +19,8 @@ class LoggedHttpApp extends HttpApp {
 		
 		super( appRequest || LoggedHttpAppRequest, host, port )
 		
-		this._config = new Config();
-		this._log = new DeferredLog( FileLog, (function() { return [ this.getConfig().get( 'storage.log' ) ]; }).bind( this ) );
+		this._storageDir = null;
+		this._log = new DeferredLog( FileLog, (function() { return [ this.getStorageDir() ]; }).bind( this ) );
 		this._logSession = this._log.openSession( null, [ 'SESSION_APP_RUN' ] );
 		this._logEnv = this._logSession.openRecord( [ 'RECORD_SERVER_ENV', 'DATA_JSON' ] );
 
@@ -41,6 +41,15 @@ class LoggedHttpApp extends HttpApp {
 	getLog () {
 		return this._log;
 	}
+
+	getStorageDir () {
+		return this._storageDir;
+	}
+
+	setStorageDir ( dir ) {
+		this._storageDir = dir;
+		return this;
+	}
 	
 
 	getLogSession ( callback ) {
@@ -59,18 +68,7 @@ class LoggedHttpApp extends HttpApp {
 			} );
 		}
 	}
-	
 
-	getConfig () {
-		return this._config;
-	}
-	
-
-	setConfig ( config ) {
-		this._config = config;
-		return this;
-	}
-	
 
 	// cleanup and then wait for all loggers to finish
 	onClose ( acallback ) {

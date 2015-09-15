@@ -1,30 +1,31 @@
+"use strict"
+
 var LoggedHttpApp = require( '../LoggedHttpApp' );
 var LoggedHttpAppRequest = require( '../LoggedHttpAppRequest' );
 var FileSession = require( '../FileSession' );
-var Config = require( 'App/Config' );
 
 // this will be instantiated by LoggedHttpApp whenever we have a new request coming in
-function MyAppRequest ( app, req, res ) {
-	// call the parent constructor
-	LoggedHttpAppRequest.call( this, app, req, res );
+class MyAppRequest extends LoggedHttpAppRequest {
 
-	// open a log stream, that is file, in which we can write data
-	// don't forget to close it or our app will not close
-	this._logStream = this.LogSession.openRecord( [ 'RECORD_STREAM', 'DATA_XML' ] );
-	this._logStream.write( '<log>\n' );
+	constructor ( app, req, res ) {
+		// call the parent constructor
+		super( app, req, res );
 
-}
+		// open a log stream, that is file, in which we can write data
+		// don't forget to close it or our app will not close
+		this._logStream = this.LogSession.openRecord( [ 'RECORD_STREAM', 'DATA_XML' ] );
+		this._logStream.write( '<log>\n' );
 
-MyAppRequest.extend( LoggedHttpAppRequest, {
+	}
 
 	// make sure we clean what we have opened
 	// logsession will not be closed properly if we have open streams
-	cleanup: function () {
+	cleanup () {
 		this._logStream.write( '</log>' );
 		this._logStream.close();
-	},
+	}
 	
-	onError: function ( err ) {
+	onError ( err ) {
 
 		// log some line in our stream
 		this._logStream.write( '<ERROR>Unhandled error "' + err.message + '"</ERROR>\n' );
@@ -41,11 +42,11 @@ MyAppRequest.extend( LoggedHttpAppRequest, {
 
 		// call the default handler, which will log the error and abort the app
 		LoggedHttpAppRequest.prototype.onError.call( this, err );
-	},
+	}
 
 
 	// this will be called when we have the whole http request
-	onHttpContent: function ( content ) {
+	onHttpContent ( content ) {
 
 		// log some line in our stream
 		this._logStream.write( '<INFO>HTTP request received</INFO>\n' );
@@ -69,20 +70,20 @@ MyAppRequest.extend( LoggedHttpAppRequest, {
 		} );
 
 	}
-} );
+}
 
 
 // construct a new HttpApp, tell it our request class is MyAppRequest
 var app = new LoggedHttpApp( MyAppRequest, '0.0.0.0', 1337 );
 
-// log sessions will be written in the directory pointed by 'storage.log', or the temp directory
-app.setConfig( new Config( { storage: { log: __dirname } } ) );
+// log sessions will be written in this directory, or the temp directory
+app.setStorageDir( __dirname );
 
 // we can customize the session directory naming
 FileSession.DirectoryFormat = 'myapp-{LogSession}{SessionName}';
 
 app.startListening();
 
-// setTimeout( function () {
-// 	require( 'child_process' ).exec( 'curl localhost:1337' );
-// }, 300 );
+setTimeout( function () {
+	require( 'child_process' ).exec( 'curl localhost:1337' );
+}, 300 );

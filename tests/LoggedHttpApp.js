@@ -13,8 +13,7 @@ var logsDir = __dirname + '/testlogs';
 
 UnitestA( 'SESSION_APP_RUN no logs', function ( test ) {
 	var app1 = new LoggedHttpApp( null, '127.0.0.1', 55555 );
-	var cfg = app1.getConfig();
-	cfg.merge( { storage: { log:  logsDir } } );
+	app1.setStorageDir( logsDir );
 	mkdir( '-p', logsDir );
 	test( Fs.existsSync( logsDir ) );
 	
@@ -54,8 +53,7 @@ function SyncEvents ( event, objects, callback ) {
 
 UnitestA( 'SESSION_APP_RUN logs upon console.log()', function ( test ) {
 	var app1 = new LoggedHttpApp( null, '127.0.0.1', 55555 );
-	var cfg = app1.getConfig();
-	cfg.merge( { storage: { log:  logsDir } } );
+	app1.setStorageDir( logsDir );
 	mkdir( '-p', logsDir );
 	test( Fs.existsSync( logsDir ) );
 	
@@ -154,8 +152,7 @@ UnitestA( 'LoggedHttpAppRequest logging', function ( test ) {
 	}
 
 	var app1 = new LoggedHttpApp( TestAppRequest, '127.0.0.1', 55555 );
-	var cfg = app1.getConfig();
-	cfg.merge( { storage: { log:  logsDir } } );
+	app1.setStorageDir( logsDir );
 	mkdir( '-p', logsDir );
 	test( Fs.existsSync( logsDir ) );
 	app1.startListening();
