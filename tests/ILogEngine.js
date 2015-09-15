@@ -9,8 +9,8 @@ Unitest( 'ILogEngine.mimeToDataType()', function ( test ) {
 	test( ILogEngine.mimeToDataType( 'application/xml' ) === ILogEngine.DATA_XML.Value );
 	test( ILogEngine.mimeToDataType( 'text/plain' ) === ILogEngine.DATA_TEXT.Value );
 	test( ILogEngine.mimeToDataType( 'text/html' ) === ILogEngine.DATA_HTML.Value );
-	test( ILogEngine.mimeToDataType( 'image/jpeg' ) === ILogEngine.DATA_JPEG.Value );
-	test( ILogEngine.mimeToDataType( 'image/png' ) === ILogEngine.DATA_PNG.Value );
+	test( ILogEngine.mimeToDataType( 'image/jpeg' ) === ILogEngine.DATA_BINARY.Value );
+	test( ILogEngine.mimeToDataType( 'image/png' ) === ILogEngine.DATA_BINARY.Value );
 	test( ILogEngine.mimeToDataType( null ) === ILogEngine.DATA_BINARY.Value );
 	test( ILogEngine.mimeToDataType( null, 'pcx' ) === 'pcx' );
 } );
@@ -22,6 +22,7 @@ Unitest( 'ILogEngine.mimeToDataLabel()', function ( test ) {
 Unitest( 'ILogEngine.labelsToProps()', function ( test ) {
 	test.eq( ILogEngine.labelsToProps( { a: 1, b: 2 } ), { a: 1, b: 2 } );
 	test.eq( ILogEngine.labelsToProps( [ 'RECORD_META', 'DATA_JSON' ] ), { RecordType: ILogEngine.RECORD_META.Value, DataType: ILogEngine.DATA_JSON.Value } );
+	test.eq( ILogEngine.labelsToProps( [ 'RECORD_META', 'Ivan', { LinkedToknes: [ 1, 2, 'asd' ] } ] ), { RecordType: ILogEngine.RECORD_META.Value, Name: 'Ivan', LinkedToknes: [ 1, 2, 'asd' ] } );
 } );
 
 Unitest( 'ILogEngine.normalizeData()', function ( test ) {

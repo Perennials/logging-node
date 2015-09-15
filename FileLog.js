@@ -109,9 +109,9 @@ FileLog.static( {
 
 	LogSessionClass: FileSession,
 
+	Protocol: '0.10',
 	Api: 'logging-node',
 	ApiVersion: '0.9',
-	LogSpecs: '0.9.4'
 
 } );
 

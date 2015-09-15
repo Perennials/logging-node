@@ -9,87 +9,104 @@ var FileRecord = require( './FileRecord' );
 var DeferredLog = require( './DeferredLog' );
 var FileLog = null;
 
-function FileSession ( log, parentId, props, callback ) {
+class FileSession extends ILogSession {
 
-	ILogSession.call( this, log, parentId, props, callback );
-	             /// this is not in ILogEngine so not in DeferredLog
-	this._dir = ( log instanceof DeferredLog ? log.getLog().getStorageUri() : log.getStorageUri() );
-	this._fileCount = 0;
-	this._openRecords = [];
-	this._loggedRecords = [];
-	this._closed = false;
-
-	var _this = this;
-
-	if ( props instanceof Function ) {
-		callback = props;
-		props = {};
-	}
-
-	props = ILogEngine.labelsToProps( props, ILogEngine.DefaultSessionProps );
-
-	var fileName = FileSession.DirectoryFormat;
-	var sessionName = '';
-	if ( !Object.isObject( props ) ) {
-		props = {};
-	}
-	else {
-		// dont ruin the original object
-		props = {}.merge( props );
-	}
-	props.merge( ILogEngine.labelsToProps( [ 'RECORD_META', 'DATA_JSON' ] ) );
-	if ( props.Name !== undefined ) {
-		sessionName = '-' + props.Name;
-		delete props.Name;
-	}
-
-	this._makeSessionId( fileName, sessionName, function ( err, id, dirName ) {
-
-		// this will never happen. the logic loops until it succeeds
-		if ( err ) {
-			_this.emit( 'Session.Open.Error', err, _this );
-
-			if ( callback instanceof Function ) {
-				process.nextTick( function () {
-					callback( err, _this );
-				} );
-			}
-			return;
-		}
-
-		_this._dir += Path.sep + dirName;
-		_this._id = id;
+	constructor ( log, parentId, props, callback ) {
 
 		// dependencies, ah
 		FileLog = FileLog || require( './FileLog' );
 
-		var meta = {
+		super( log, parentId, props, callback );
+		             /// this is not in ILogEngine so not in DeferredLog
+		this._dir = ( log instanceof DeferredLog ? log.getLog().getStorageUri() : log.getStorageUri() );
+		this._fileCount = 0;
+		this._openRecords = [];
+		this._loggedRecords = [];
+		this._closed = false;
+		this._meta = {
+			Protocol: FileLog.Protocol,
 			Api: FileLog.Api,
 			ApiVersion: FileLog.ApiVersion,
-			LogSpecs: FileLog.LogSpecs,
-			LogSession: id,
-			ParentSession: parentId,
-			TimeStamp: (new Date()).toISOString()
+			LogSession: null,
+			ParentSession: null,
+			LinkedTokens: [],
+			TimeStamp: null
 		};
+		this._pendingWrites = 0;
 
-		_this.write( meta, props, function ( err ) {
+		var _this = this;
 
-			_this.emit( 'Session.Opened', err, _this );
+		if ( props instanceof Function ) {
+			callback = props;
+			props = {};
+		}
 
-			if ( callback instanceof Function ) {
-				process.nextTick( function () {
-					callback( err, _this );
-				} );
+		props = ILogEngine.labelsToProps( props, ILogEngine.DefaultSessionProps );
+
+		var fileName = FileSession.DirectoryFormat;
+		var sessionName = '';
+		if ( !Object.isObject( props ) ) {
+			props = {};
+		}
+		else {
+			// dont ruin the original object
+			props = {}.merge( props );
+		}
+		props.merge( ILogEngine.labelsToProps( [ 'RECORD_META', 'DATA_JSON' ] ) );
+		if ( props.Name !== undefined ) {
+			sessionName = '-' + props.Name;
+			delete props.Name;
+		}
+		if ( props.LinkedTokens ) {
+			this._meta.LinkedTokens = props.LinkedTokens;
+		}
+
+		this._makeSessionId( fileName, sessionName, function ( err, id, dirName ) {
+
+			// this will never happen. the logic loops until it succeeds
+			if ( err ) {
+				_this.emit( 'Session.Open.Error', err, _this );
+
+				if ( callback instanceof Function ) {
+					process.nextTick( function () {
+						callback( err, _this );
+					} );
+				}
+				return;
 			}
+
+			_this._dir += Path.sep + dirName;
+			_this._id = id;
+
+			var meta = _this._meta;
+			meta.LogSession = id;
+			meta.ParentSession = parentId;
+			if ( meta.TimeStamp === null ) {
+				meta.TimeStamp = (new Date()).toISOString();
+			}
+
+			_this.write( meta, props, function ( err, record ) {
+
+				if ( err ) {
+					this.emit( 'Session.Meta.Error', err, record );
+				}
+
+				_this._metaRecord = record.getUri();
+
+				_this.emit( 'Session.Opened', err, _this );
+
+				if ( callback instanceof Function ) {
+					process.nextTick( function () {
+						callback( err, _this );
+					} );
+				}
+			} );
+
 		} );
 
-	} );
+	}
 
-}
-
-FileSession.extend( ILogSession, {
-
-	_makeSessionId: function ( fileName, sessionName, callback, _num ) {
+	_makeSessionId ( fileName, sessionName, callback, _num ) {
 		if ( _num === undefined ) {
 			_num = Date.now();
 		}
@@ -111,9 +128,9 @@ FileSession.extend( ILogSession, {
 				} );
 			}
 		} );
-	},
+	}
 
-	_makeRecordId: function ( props ) {
+	_makeRecordId ( props ) {
 		var recordName = '';
 		if ( String.isString( props.Name ) ) {
 			recordName = '-' + props.Name;
@@ -127,13 +144,35 @@ FileSession.extend( ILogSession, {
 			FileSession._dataTypeToFileExt( props.DataType );
 
 		return fileName;
-	},
+	}
 
-	_getLastIdIndex: function () {
+	_getLastIdIndex () {
 		return this._fileCount - 1;
-	},
+	}
 
-	isIdle: function () {
+	addLinkedToken ( token ) {
+		this._meta.LinkedTokens.push( token );
+		if ( this._metaRecord ) {
+			
+			var _this = this;
+			++this._pendingWrites;
+			Fs.writeFile( this._metaRecord, JSON.stringify( this._meta ), function ( err ) {
+				if ( err ) {
+					_this.emit( 'Session.Meta.Error', err );
+				}
+				
+				if ( --_this._pendingWrites === 0 && _this.isIdle() ) {
+					_this.emit( 'Session.Idle' );
+				}
+			} );
+		}
+		return this;
+	}
+
+	isIdle () {
+		if ( this._pendingWrites > 0 ) {
+			return false;
+		}
 		var records = this._openRecords;
 		if ( records.length === 0 ) {
 			return true;
@@ -144,17 +183,17 @@ FileSession.extend( ILogSession, {
 			}
 		}
 		return true;
-	},
+	}
 
-	getStorageUri: function () {
+	getStorageUri () {
 		return this._dir;
-	},
+	}
 
-	getLoggedRecords: function () {
+	getLoggedRecords () {
 		return this._loggedRecords;
-	},
+	}
 
-	close: function ( callback ) {
+	close ( callback ) {
 		var _this = this;
 		if ( this._closed ) {
 			if ( callback instanceof Function ) {
@@ -186,13 +225,13 @@ FileSession.extend( ILogSession, {
 				}
 			} );
 		} );
-	},
+	}
 
-	getOpenRecords: function () {
+	getOpenRecords () {
 		return this._openRecords;
-	},
+	}
 
-	openRecord: function ( props, callback ) {
+	openRecord ( props, callback ) {
 		var _this = this;
 		var record = new FileRecord( this, props, callback );
 		this._openRecords.push( record );
@@ -202,14 +241,14 @@ FileSession.extend( ILogSession, {
 
 			var records = _this._openRecords;
 			records.splice( records.indexOf( record ), 1 );
-			if ( records.length === 0 ) {
+			if ( records.length === 0 && _this.isIdle() ) {
 				_this.emit( 'Session.Idle', _this );
 			}
 		} );
 		return record;
-	},
+	}
 
-	wait: function ( callback ) {
+	wait ( callback ) {
 
 		if ( this.isIdle() ) {
 			process.nextTick( callback );
@@ -219,17 +258,11 @@ FileSession.extend( ILogSession, {
 		this.once( 'Session.Idle', callback );
 	}
 
-} ).implement( ILogSession );
-
-FileSession.static( {
-
-	DirectoryFormat: '{LogSession}{SessionName}',
-
-	_dataTypeToFileExt: function ( dataType, def ) {
+	static _dataTypeToFileExt ( dataType, def ) {
 		return FileSession._dataLabelToFileExt( 'DATA_' + dataType, def );
-	},
+	}
 
-	_dataLabelToFileExt: function ( dataLabel, def ) {
+	static _dataLabelToFileExt ( dataLabel, def ) {
 
 		if ( def === undefined ) {
 			def = 'bin';
@@ -259,6 +292,14 @@ FileSession.static( {
 		
 		return def;
 	}
+
+}
+
+FileSession.implement( ILogSession );
+
+FileSession.static( {
+
+	DirectoryFormat: '{LogSession}{SessionName}'
 
 } );
 

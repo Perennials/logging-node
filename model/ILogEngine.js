@@ -42,16 +42,6 @@ ILogEngine.static( {
 		Value: 'HTML'
 	},
 
-	DATA_JPEG: {
-		Name: 'DataType',
-		Value: 'JPEG'
-	},
-
-	DATA_PNG: {
-		Name: 'DataType',
-		Value: 'PNG'
-	},
-
 	RECORD_META: {
 		Name: 'RecordType',
 		Value: 'META'
@@ -138,12 +128,6 @@ ILogEngine.static( {
 		if ( contentType == 'application/json' ) {
 			return ILogEngine.DATA_JSON.Value;
 		}
-		else if ( contentType == 'image/jpeg' ) {
-			return ILogEngine.DATA_JPEG.Value;
-		}
-		else if ( contentType == 'image/png' ) {
-			return ILogEngine.DATA_PNG.Value;
-		}
 		else if ( contentType == 'text/html' ) {
 			return ILogEngine.DATA_HTML.Value;
 		}
@@ -182,6 +166,12 @@ ILogEngine.static( {
 			props = {};
 			for ( var i = labels.length - 1; i >= 0; --i ) {
 				var label = labels[ i ];
+
+				if ( label instanceof Object ) {
+					props.merge( label );
+					continue;
+				}
+
 				var prop = ILogEngine[ label ];
 				if ( prop instanceof Object ) {
 					props[ prop.Name ] = prop.Value;

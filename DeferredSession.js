@@ -4,30 +4,47 @@ var ILogSession = require( './model/ILogSession' );
 var DeferredRecord = require( './DeferredRecord' );
 var ProxyEvents = require( './DeferredHelpers' ).ProxyEvents;
 
-function DeferredSession ( constructor, log, parentId, props, callback ) {
+class DeferredSession extends ILogSession {
 
-	ILogSession.call( this, log, parentId, props, callback );
+	constructor ( constructor, log, parentId, props, callback ) {
 
-	this._session = null;
-	this._ctor = constructor;
-	this._ctorParams = Array.prototype.slice.call( arguments, 1 );
-	this._deferredRecords = [];
-	this._openingSession = false;
-	this._closed = false;
+		super( log, parentId, props, callback );
 
-}
+		this._session = null;
+		this._ctor = constructor;
+		this._ctorParams = Array.prototype.slice.call( arguments, 1 );
+		this._deferredRecords = [];
+		this._tokens = [];
+		this._openingSession = false;
+		this._closed = false;
 
-DeferredSession.extend( ILogSession, {
+	}
 
-	assignLog: function ( log ) {
+	assignLog ( log ) {
 		return this._onLogOpened( log );
-	},
+	}
 
-	_onLogOpened: function ( log ) {
+	_onLogOpened ( log ) {
 		if ( this._openingSession !== 1 ) {
 			return;
 		}
 		this._openingSession = 2;
+
+		if ( this._tokens.length > 0 ) {
+			
+			var props = _this._ctorParams[ 2 ];
+			if ( props instanceof Array ) {
+				props = props.concat( { LinkedTokens: this._tokens } );
+			}
+			else if ( props instanceof Object ) {
+				if ( props.LinkedTokens ) {
+					props.LinkedTokens = props.LinkedTokens.concat( this._tokens );
+				}
+				else {
+					props.LinkedTokens = this._tokens;
+				}
+			}
+		}
 
 		var _this = this;
 		var session = Object.newArgs( _this._ctor, _this._ctorParams );
@@ -49,20 +66,20 @@ DeferredSession.extend( ILogSession, {
 
 			_this.emit( 'Session.Opened', err, _this )
 		} );
-	},
+	}
 
 	// open real session on first write and assign to all records
-	_onRecordOpen: function ( record ) {
+	_onRecordOpen ( record ) {
 		if ( this._session || this._openingSession > 0 ) {
 			return;
 		}
 		this._openingSession = 1;
 		this._log.once( 'Log.Opened', this._onLogOpened.bind( this ) );
 		this.emit( 'Deferred.Open', this );
-	},
+	}
 
 	// nothing is written anywhere
-	isEmpty: function () {
+	isEmpty () {
 		var records = this._deferredRecords;
 		if ( records.length === 0 ) {
 			return true;
@@ -73,49 +90,59 @@ DeferredSession.extend( ILogSession, {
 			}
 		}
 		return true;
-	},
+	}
 
-	getLogSession: function () {
+	getLogSession () {
 		return this._session;
-	},
+	}
 
-	getLog: function () {
+	getLog () {
 		return this._log;
-	},
+	}
 
-	getId: function () {
+	getId () {
 		return this._id;
-	},
+	}
 
-	getParentId: function () {
+	getParentId () {
 		return this._parentId;
-	},
+	}
 
-	getStorageUri: function () {
+	getStorageUri () {
 		var obj = this._session;
 		if ( obj ) {
 			return obj.getStorageUri();
 		}
 		return null;
-	},
+	}
 
-	getOpenRecords: function () {
+	getOpenRecords () {
 		var obj = this._session;
 		if ( obj ) {
 			return obj.getOpenRecords();
 		}
 		return [];
-	},
+	}
 	
-	getLoggedRecords: function () {
+	getLoggedRecords () {
 		var obj = this._session;
 		if ( obj ) {
 			return obj.getLoggedRecords();
 		}
 		return [];
-	},
+	}
 
-	openRecord: function ( props, callback ) {
+	addLinkedToken ( token ) {
+		if ( this._session ) {
+			this._session.addLinkedToken( token );
+		}
+		else {
+			this._tokens.push( token );
+		}
+		return this;
+	}
+
+	openRecord ( props, callback ) {
 		var record = new DeferredRecord( this, props, callback );
 		var _this = this;
 		if ( this._session ) {
@@ -135,9 +162,9 @@ DeferredSession.extend( ILogSession, {
 		}
 		this._deferredRecords.push( record );
 		return record;
-	},
+	}
 
-	close: function ( callback ) {
+	close ( callback ) {
 		var obj = this._session;
 		if ( obj ) {
 			return obj.close( callback );
@@ -165,9 +192,9 @@ DeferredSession.extend( ILogSession, {
 				process.nextTick( callback );
 			}
 		}
-	},
+	}
 
-	wait: function ( callback ) {
+	wait ( callback ) {
 		var obj = this._session;
 		if ( obj ) {
 			return obj.wait( callback );
@@ -180,8 +207,10 @@ DeferredSession.extend( ILogSession, {
 				process.nextTick( callback );
 			}
 		}
-	},
+	}
 
-} ).implement( ILogSession );
+}
+
+DeferredSession.implement( ILogSession );
 
 module.exports = DeferredSession;

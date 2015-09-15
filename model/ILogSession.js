@@ -61,7 +61,7 @@ ILogSession.extend( Events.EventEmitter, {
 				record.close( function () {
 					if ( callback instanceof Function ) {
 						process.nextTick( function () {
-							callback( err );
+							callback( err, record );
 						} );
 					}
 				} );

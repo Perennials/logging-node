@@ -50,12 +50,14 @@ The implementation is in `BETA` stage.
 			- [.getStorageUri()](#getstorageuri-1)
 			- [.getOpenRecords()](#getopenrecords)
 			- [.getLoggedRecords()](#getloggedrecords)
+			- [.addLinkedToken()](#addlinkedtoken)
 			- [.write()](#write)
 			- [.wait()](#wait-1)
 			- [.close()](#close)
 		- [Events](#events-1)
 			- ['Session.Opened'](#sessionopened)
 			- ['Session.Open.Error'](#sessionopenerror)
+			- ['Session.Meta.Error'](#sessionmetaerror)
 			- ['Session.Idle'](#sessionidle)
 			- ['Session.Closed'](#sessionclosed)
 	- [FileRecord](#filerecord)
@@ -225,9 +227,11 @@ simply a string and provides a level of abstraction and convenience over the
 key-value pairs of the specs.
 
 If a label is not recognized as one of the supported values, it will be
-treated as a `Name` for the session or the record.
+treated as a `Name` for the session or the record. For example `MyRecordName`
+will be translated to `Name: 'MyRecordName'`.
 
-For example `MyRecordName` will be translated to `Name: 'MyRecordName'`.
+If an on object is passed in the labels array, its properties will be used as
+they are.
 
 - [Session labels](#session-labels)
 - [Record labels](#record-labels)
@@ -263,8 +267,6 @@ The meaning of the keys and values is explained
 - `DATA_XML`, translates to `DataType: 'XML'`.
 - `DATA_TEXT`, translates to `DataType: 'TEXT'`.
 - `DATA_HTML`, translates to `DataType: 'HTML'`.
-- `DATA_JPEG`, translates to `DataType: 'JPEG'`.
-- `DATA_PNG`, translates to `DataType: 'PNG'`.
 
 
 ### LoggedHttpApp
@@ -617,6 +619,7 @@ var FileSession = require( 'Logging/FileSession' );
 - [.getStorageUri()](#getstorageuri-1)
 - [.getOpenRecords()](#getopenrecords)
 - [.getLoggedRecords()](#getloggedrecords)
+- [.addLinkedToken()](#addlinkedtoken)
 - [.write()](#write)
 - [.wait()](#wait-1)
 - [.close()](#close)
@@ -694,6 +697,14 @@ Retrieves the list of past records, that is records that were closed. Could be e
 .getLoggedRecords() : String[];
 ```
 
+##### .addLinkedToken()
+Associates a token with the log session.
+
+```js
+.addLinkedToken(
+	token:String
+) : this;
+```
 
 ##### .write()
 This is a convenience function for opening a record, writing a piece of data in it and
@@ -745,6 +756,7 @@ actually invoke `.wait()` and continue when all the records are closed.
 
 - ['Session.Opened'](#sessionopened)
 - ['Session.Open.Error'](#sessionopenerror)
+- ['Session.Meta.Error'](#sessionmetaerror)
 - ['Session.Idle'](#sessionidle)
 - ['Session.Closed'](#sessionclosed)
 
@@ -767,11 +779,19 @@ Emitted if an error prevented the session from opening.
 
 ```js
 function (
-	err:Error|null,
+	err:Error,
 	session:FileSession
 );
 ```
 
+##### 'Session.Meta.Error'
+Emitted if an error prevented the session meta record from being written.
+
+```js
+function (
+	err:Error
+);
+```
 
 ##### 'Session.Idle'
 Emitted every time the last open record of this session is closed.
@@ -887,7 +907,7 @@ Emitted if an error prevented the record from opening.
 
 ```js
 function (
-	err:Error|null,
+	err:Error,
 	record:FileRecord
 );
 ```
@@ -994,7 +1014,6 @@ var DeferredRecord = require( 'Logging/DeferredRecord' );
 TODO
 ----
 
-- Update to Specs 0.10.
 - There should be a flag if to log HTTP messages in human format or mirror.
   Human means to remove the chunked encoding and unzip before writing to the file.
 - Would be cool to document everything precisely, including the interfaces and
