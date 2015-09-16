@@ -16,29 +16,21 @@ class FileSession extends ILogSession {
 		// dependencies, ah
 		FileLog = FileLog || require( './FileLog' );
 
-		super( log, parentId, props, callback );
-		             /// this is not in ILogEngine so not in DeferredLog
-		this._dir = ( log instanceof DeferredLog ? log.getLog().getStorageUri() : log.getStorageUri() );
-		this._fileCount = 0;
-		this._openRecords = [];
-		this._loggedRecords = [];
-		this._closed = false;
-		this._meta = {
-			Protocol: FileLog.Protocol,
-			Api: FileLog.Api,
-			ApiVersion: FileLog.ApiVersion,
-			LogSession: null,
-			ParentSession: null,
-			LinkedTokens: [],
-			TimeStamp: null
-		};
-		this._pendingWrites = 0;
+		if ( Object.isObject( parentId ) || parentId instanceof Array ) {
+			callback = props;
+			props = parentId;
+			parentId = null;
+		}
 
-		var _this = this;
-
-		if ( props instanceof Function ) {
+		else if ( props instanceof Function ) {
 			callback = props;
 			props = {};
+		}
+
+		else if ( parentId instanceof Function ) {
+			callback = parentId;
+			props = {};
+			parentId = null;
 		}
 
 		props = ILogEngine.labelsToProps( props, ILogEngine.DefaultSessionProps );
@@ -53,29 +45,62 @@ class FileSession extends ILogSession {
 			props = {}.merge( props );
 		}
 		props.merge( ILogEngine.labelsToProps( [ 'RECORD_META', 'DATA_JSON' ] ) );
+		
 		if ( props.Name !== undefined ) {
 			sessionName = '-' + props.Name;
 			delete props.Name;
 		}
+		
+		if ( props.DirectoryFormat ) {
+			fileName = props.DirectoryFormat;
+			delete props.DirectoryFormat;
+		}
+
+		if ( props.ParentSession ) {
+			parentId = props.ParentSession;
+			delete props.ParentSession;
+		}
+
+		super( log, parentId, props, callback );
+
+		             /// this is not in ILogEngine so not in DeferredLog
+		this._dir = ( log instanceof DeferredLog ? log.getLog().getStorageUri() : log.getStorageUri() );
+		this._fileCount = 0;
+		this._openRecords = [];
+		this._loggedRecords = [];
+		this._closed = false;
+		this._meta = {
+			Protocol: FileLog.Protocol,
+			Api: FileLog.Api,
+			ApiVersion: FileLog.ApiVersion,
+			LogSession: null,
+			ParentSession: null,
+			LinkedTokens: [],
+			SessionType: props.SessionType || null,
+			TimeStamp: null
+		};
+		this._pendingWrites = 0;
+
+		var _this = this;
+
 		if ( props.LinkedTokens ) {
 			this._meta.LinkedTokens = props.LinkedTokens;
 		}
 
-		this._makeSessionId( fileName, sessionName, function ( err, id, dirName ) {
+		this._makeSessionId( this._meta.SessionType, fileName, sessionName, function ( err, index, id ) {
 
 			// this will never happen. the logic loops until it succeeds
 			if ( err ) {
 				_this.emit( 'Session.Open.Error', err, _this );
 
 				if ( callback instanceof Function ) {
-					process.nextTick( function () {
-						callback( err, _this );
-					} );
+					process.nextTick( callback, err, _this );
 				}
 				return;
 			}
 
-			_this._dir += Path.sep + dirName;
+			_this._dir += Path.sep + id;
+			_this._index = index;
 			_this._id = id;
 
 			var meta = _this._meta;
@@ -96,9 +121,7 @@ class FileSession extends ILogSession {
 				_this.emit( 'Session.Opened', err, _this );
 
 				if ( callback instanceof Function ) {
-					process.nextTick( function () {
-						callback( err, _this );
-					} );
+					process.nextTick( callback, err, _this );
 				}
 			} );
 
@@ -106,13 +129,13 @@ class FileSession extends ILogSession {
 
 	}
 
-	_makeSessionId ( fileName, sessionName, callback, _num ) {
+	_makeSessionId ( sessionType, fileName, sessionName, callback, _num ) {
 		if ( _num === undefined ) {
 			_num = Date.now();
 		}
 
 		var id = _num.toString( 36 );
-		var dirName = fileName.replace( '{LogSession}', id ).replace( '{SessionName}', sessionName );
+		var dirName = fileName.replace( '{SessionIndex}', id ).replace( '{SessionName}', sessionName ).replace( '{SessionType}', sessionType );
 		var path = this._dir + Path.sep + dirName;
 		
 		var _this = this;
@@ -120,12 +143,10 @@ class FileSession extends ILogSession {
 		// try to create a dir with unique name
 		Fs.mkdir( path, function( err, fd ) {
 			if ( err ) {
-				_this._makeSessionId( fileName, sessionName, callback, _num + 1 );
+				_this._makeSessionId( sessionType, fileName, sessionName, callback, _num + 1 );
 			}
 			else {
-				process.nextTick( function () {
-					callback( null, id, dirName )
-				} );
+				process.nextTick( callback, null, id, dirName )
 			}
 		} );
 	}
@@ -150,22 +171,33 @@ class FileSession extends ILogSession {
 		return this._fileCount - 1;
 	}
 
+	_updateMetaRecord () {
+		if ( this._metaRecord === null ) {
+			return;
+		}
+			
+		var _this = this;
+		++this._pendingWrites;
+		Fs.writeFile( this._metaRecord, JSON.stringify( this._meta ), function ( err ) {
+			if ( err ) {
+				_this.emit( 'Session.Meta.Error', err );
+			}
+			
+			if ( --_this._pendingWrites === 0 && _this.isIdle() ) {
+				_this.emit( 'Session.Idle' );
+			}
+		} );
+	}
+
+	setParentSession ( sessionId ) {
+		this._meta.ParentSession = sessionId;
+		this._updateMetaRecord();
+		return this;
+	}
+
 	addLinkedToken ( token ) {
 		this._meta.LinkedTokens.push( token );
-		if ( this._metaRecord ) {
-			
-			var _this = this;
-			++this._pendingWrites;
-			Fs.writeFile( this._metaRecord, JSON.stringify( this._meta ), function ( err ) {
-				if ( err ) {
-					_this.emit( 'Session.Meta.Error', err );
-				}
-				
-				if ( --_this._pendingWrites === 0 && _this.isIdle() ) {
-					_this.emit( 'Session.Idle' );
-				}
-			} );
-		}
+		this._updateMetaRecord();
 		return this;
 	}
 
@@ -197,9 +229,7 @@ class FileSession extends ILogSession {
 		var _this = this;
 		if ( this._closed ) {
 			if ( callback instanceof Function ) {
-				process.nextTick( function () {
-					callback( null, _this );
-				} );
+				process.nextTick( callback, null, this );
 			}	
 			return;
 		}
@@ -219,9 +249,7 @@ class FileSession extends ILogSession {
 				_this.emit( 'Session.Closed', err, _this );
 
 				if ( callback instanceof Function ) {
-					process.nextTick( function () {
-						callback( err, _this );
-					} );
+					process.nextTick( callback, err, _this );
 				}
 			} );
 		} );
@@ -299,7 +327,7 @@ FileSession.implement( ILogSession );
 
 FileSession.static( {
 
-	DirectoryFormat: '{LogSession}{SessionName}'
+	DirectoryFormat: '{SessionIndex}{SessionName}'
 
 } );
 

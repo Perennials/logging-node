@@ -21,7 +21,8 @@ ILogRecord.extend( Events.EventEmitter, {
 	getUri: function () {},
 	close: function ( callback ) {},
 	wait: function ( callback ) {},
-	write: function ( data, callback ) {}
+	write: function ( data, callback ) {},
+	setFlushArbiter: function ( arbiter ) {}
 } );
 
 module.exports = ILogRecord;

@@ -1,11 +1,10 @@
 "use strict"
 
-var LoggedHttpApp = require( '../LoggedHttpApp' );
-var LoggedHttpAppRequest = require( '../LoggedHttpAppRequest' );
-var FileSession = require( '../FileSession' );
+var PerennialApp = require( '../PerennialApp' );
+var PerennialAppRequest = require( '../PerennialAppRequest' );
 
-// this will be instantiated by LoggedHttpApp whenever we have a new request coming in
-class MyAppRequest extends LoggedHttpAppRequest {
+// this will be instantiated by PerennialApp whenever we have a new request coming in
+class MyAppRequest extends PerennialAppRequest {
 
 	constructor ( app, req, res ) {
 		// call the parent constructor
@@ -15,7 +14,15 @@ class MyAppRequest extends LoggedHttpAppRequest {
 		// don't forget to close it or our app will not close
 		this._logStream = this.LogSession.openRecord( [ 'RECORD_STREAM', 'DATA_XML' ] );
 		this._logStream.write( '<log>\n' );
+	}
 
+	// customize options for log session that will be created in the constructor
+	determineSessionProps () {
+		return { DirectoryFormat: 'myapp-{SessionType}-{SessionIndex}{SessionName}' };
+	}
+
+	determineLogPolicy () {
+		return 'LOG_ALL_ON_ERROR';
 	}
 
 	// make sure we clean what we have opened
@@ -41,7 +48,7 @@ class MyAppRequest extends LoggedHttpAppRequest {
 		this.cleanup();
 
 		// call the default handler, which will log the error and abort the app
-		LoggedHttpAppRequest.prototype.onError.call( this, err );
+		super.onError( err );
 	}
 
 
@@ -72,16 +79,22 @@ class MyAppRequest extends LoggedHttpAppRequest {
 	}
 }
 
+class MyApp extends PerennialApp {
+
+	determineSessionProps () {
+		return { DirectoryFormat: 'myapp-{SessionType}-{SessionIndex}{SessionName}' };
+	}
+}
+
 
 // construct a new HttpApp, tell it our request class is MyAppRequest
-var app = new LoggedHttpApp( MyAppRequest, '0.0.0.0', 1337 );
+var app = new MyApp( MyAppRequest, '0.0.0.0', 1337 );
 
 // log sessions will be written in this directory, or the temp directory
 app.setStorageDir( __dirname );
 
-// we can customize the session directory naming
-FileSession.DirectoryFormat = 'myapp-{LogSession}{SessionName}';
-
+// log something in the app log session
+console.log( 'Starting to listen on 0.0.0.0:1337' );
 app.startListening();
 
 setTimeout( function () {

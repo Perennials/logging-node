@@ -58,7 +58,7 @@ UnitestA( 'FileLog.openSession()', function ( test ) {
 			test( Fs.existsSync( dir
 			                         + Path.sep
 			                         + FileSession.DirectoryFormat
-			                         	.replace( '{LogSession}', session.getId() )
+			                         	.replace( '{SessionIndex}', session.getIndex() )
 			                         	.replace( '{SessionName}', '-Sesiq' )
 			) );
 			test.eq( session.getLoggedRecords()[ 0 ], '1-META.json' );
@@ -71,6 +71,51 @@ UnitestA( 'FileLog.openSession()', function ( test ) {
 			test( meta.LogSession == session.getId() );
 			test( meta.ParentSession == '123' );
 			test.eq( meta.LinkedTokens, [ 'asd', 'qwe' ] );
+
+			// clean everything
+			session.close( function () {
+				rm( '-rf', dir );
+				test.out();
+			} );
+		} );
+
+	} );
+} );
+
+UnitestA( 'FileLog.openSession() 2', function ( test ) {
+	var dir = __dirname + Path.sep + 'testlogs';
+	mkdir( '-p', dir );
+	test( Fs.existsSync( dir ) );
+
+	// start a file log
+	new FileLog( dir, function ( err, log ) {
+		test( !err );
+		test( log instanceof FileLog );
+		test( log.getStorageUri() == dir );
+
+		if ( err ) {
+			test.out();
+			return;
+		}
+
+		// start a session with parent and name
+		log.openSession( [ 'Sesiq', { ParentSession: 'qwe', DirectoryFormat: 'myapp' + FileSession.DirectoryFormat } ], function ( err, session ) {
+
+			test( !err );
+
+			// check if we have proper meta data for the session
+			test( Fs.existsSync( dir
+			                         + Path.sep + 'myapp'
+			                         + FileSession.DirectoryFormat
+			                         	.replace( '{SessionIndex}', session.getIndex() )
+			                         	.replace( '{SessionName}', '-Sesiq' )
+			) );
+			test.eq( session.getLoggedRecords()[ 0 ], '1-META.json' );
+			var fn = session.getStorageUri() + '/' + session.getLoggedRecords()[ 0 ];
+			test( Fs.existsSync( fn ) );
+			
+			var meta = JSON.parse( Fs.readFileSync( fn, { encoding: 'utf8' } ) );
+			test( meta.ParentSession == 'qwe' );
 
 			// clean everything
 			session.close( function () {
@@ -104,13 +149,6 @@ UnitestA( 'FileSession.addLinkedToken()', function ( test ) {
 
 			test( !err );
 
-			// check if we have proper meta data for the session
-			test( Fs.existsSync( dir
-			                         + Path.sep
-			                         + FileSession.DirectoryFormat
-			                         	.replace( '{LogSession}', session.getId() )
-			                         	.replace( '{SessionName}', '-Sesiq' )
-			) );
 			test.eq( session.getLoggedRecords()[ 0 ], '1-META.json' );
 			var fn = session.getStorageUri() + '/' + session.getLoggedRecords()[ 0 ];
 			test( Fs.existsSync( fn ) );
@@ -164,7 +202,7 @@ UnitestA( 'FileSession.wait()', function ( test ) {
 				var fn = session.getStorageUri() + '/' + session.getLoggedRecords()[ 1 ];
 				test( Fs.readFileSync( fn, { encoding: 'utf8' } ) == 'asd qwe' );
 			} );
-			debugger;
+			
 			// open one stream too and see if write is working and closing is properly waited for
 			session.openRecord( function ( err, record ) {
 				if ( record ) {

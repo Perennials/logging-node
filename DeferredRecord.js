@@ -7,52 +7,57 @@ var ProxyEvents = require( './DeferredHelpers' ).ProxyEvents;
 // this class will defer opening a log stream until the first write
 // if it doesn't have an ILogSession associated with it, it will buffer the writes
 // all buffered content will be flushed once a session is assigned
-function DeferredRecord ( session, props, callback ) {
+class DeferredRecord extends ILogRecord {
+	
+	constructor ( session, props, callback ) {
 
-	ILogRecord.call( this, null, props, callback );
+		super ( null, props, callback );
 
-	this._record = null;
-	this._buffer = null;
-	this._queueClose = false;
-	this._closed = false;
-	this._openingSession = false;
+		this._record = null;
+		this._buffer = null;
+		this._queueClose = false;
+		this._closed = false;
+		this._openingSession = false;
+		this._flushArbiter = DeferredRecord.flushArbiter;
+		this._flushOnce = false;
 
-	if ( callback instanceof Function ) {
-		var _this = this;
-		process.nextTick( function () {
-			callback( null, _this );
-		} );
+		this.emit( 'Record.Opened', null, this );
+
+		if ( callback instanceof Function ) {
+			process.nextTick( callback, null, this );
+		}
 	}
-}
 
-DeferredRecord.extend( ILogRecord, {
+	isFlushed () {
+		return this._buffer === null || this._buffer.isFlushed();
+	}
 
 	//nothing is written yet
-	isEmpty: function () {
-		return this._buffer === null && this._record === null;
-	},
+	isEmpty () {
+		return this.isFlushed() && this._record === null;
+	}
 
-	getLogRecord: function () {
+	getLogRecord () {
 		return this._record;
-	},
+	}
 
-	getId: function () {
+	getId () {
 		var obj = this._record;
 		if ( obj ) {
 			return obj.getId();
 		}
 		return null;
-	},
+	}
 	
-	getUri: function () {
+	getUri () {
 		var obj = this._record;
 		if ( obj ) {
 			return obj.getUri();
 		}
 		return null;
-	},
+	}
 
-	write: function ( data, callback ) {
+	write ( data, callback ) {
 		var obj = this._record;
 		if ( obj ) {
 			return obj.write( data, callback );
@@ -65,22 +70,19 @@ DeferredRecord.extend( ILogRecord, {
 		}
 
 		var ret = buffer.push( 'write', data, callback );
-		var session = this._session;
-		if ( session !== null && session.getLogSession() !== null ) {
-			this.assignSession( session );
+		if ( this._flushArbiter( this ) ) {
+			this.flush();
+			this.emit( 'Deferred.Open', this );
 		}
-		this.emit( 'Deferred.Open', this );
 
 		return ret;
-	},
+	}
 
-	close: function ( callback ) {
+	close ( callback ) {
 
 		if ( this._closed ) {
 			if ( callback instanceof Function ) {
-				process.nextTick( function () {
-					callback( null, _this );
-				} );
+				process.nextTick( callback, null, this );
 			}
 			return;
 		}
@@ -106,9 +108,20 @@ DeferredRecord.extend( ILogRecord, {
 		this._buffer = null;
 		this._queueClose = false;
 		return ret;
-	},
+	}
 
-	assignSession: function ( session ) {
+	flush () {
+		var session = this._session;
+		if ( session !== null && session.getLogSession() !== null ) {
+			this.assignSession( session );
+		}
+		else {
+			this._flushOnce = true;
+			this.emit( 'Deferred.Open', this );
+		}
+	}
+
+	assignSession ( session ) {
 
 		//todo: remove after testing
 		if ( this._record ) {
@@ -118,7 +131,7 @@ DeferredRecord.extend( ILogRecord, {
 		this._session = session;
 		
 		// if we have a buffered stream, open a real log stream
-		if ( this._buffer === null ) {
+		if ( this.isFlushed() || (!this._flushOnce && !this._flushArbiter( this )) ) {
 			return;
 		}
 
@@ -126,6 +139,7 @@ DeferredRecord.extend( ILogRecord, {
 			return;
 		}
 
+		this._flushOnce = false;
 		this._openingSession = true;
 
 		var _this = this;
@@ -144,19 +158,16 @@ DeferredRecord.extend( ILogRecord, {
 			buffer.flush( record );
 
 			ProxyEvents( [
-				'Record.Opened',
-				'Record.Open.Error',
 				'Record.Closed',
 				'Record.Idle'
 			], record, _this );
 
-			_this.emit( 'Deferred.Flush' );
-			_this.emit( 'Record.Opened', err, _this );
+			_this.emit( 'Deferred.Flush', err, _this );
 
 		} );
-	},
+	}
 
-	wait: function ( callback ) {
+	wait ( callback ) {
 		var obj = this._log;
 		if ( obj ) {
 			return obj.wait( callback );
@@ -168,6 +179,17 @@ DeferredRecord.extend( ILogRecord, {
 		}
 	}
 
-} ).implement( ILogRecord );
+	setFlushArbiter ( arbiter ) {
+		this._flushArbiter = arbiter;
+		return this;
+	}
+
+	static flushArbiter ( record ) {
+		return true;
+	}
+
+}
+
+DeferredRecord.implement( ILogRecord );
 
 module.exports = DeferredRecord;

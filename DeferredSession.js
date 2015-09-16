@@ -8,15 +8,42 @@ class DeferredSession extends ILogSession {
 
 	constructor ( constructor, log, parentId, props, callback ) {
 
+		if ( Object.isObject( parentId ) || parentId instanceof Array ) {
+			callback = props;
+			props = parentId;
+			parentId = null;
+		}
+
+		else if ( props instanceof Function ) {
+			callback = props;
+			props = {};
+		}
+
+		else if ( parentId instanceof Function ) {
+			callback = parentId;
+			props = {};
+			parentId = null;
+		}
+
 		super( log, parentId, props, callback );
 
 		this._session = null;
 		this._ctor = constructor;
-		this._ctorParams = Array.prototype.slice.call( arguments, 1 );
+		this._ctorLog = log;
+		this._ctorParentId = parentId;
+		this._ctorProps = props;
+		this._ctorCallback = callback;
 		this._deferredRecords = [];
 		this._tokens = [];
 		this._openingSession = false;
 		this._closed = false;
+		this._flushArbiter = null;
+
+		this.emit( 'Session.Opened', null, this );
+
+		if ( callback instanceof Function ) {
+			process.nextTick( callback, null, this );
+		}
 
 	}
 
@@ -32,11 +59,11 @@ class DeferredSession extends ILogSession {
 
 		if ( this._tokens.length > 0 ) {
 			
-			var props = _this._ctorParams[ 2 ];
+			var props = this._ctorProps;
 			if ( props instanceof Array ) {
 				props = props.concat( { LinkedTokens: this._tokens } );
 			}
-			else if ( props instanceof Object ) {
+			else if ( Object.isObject( props ) ) {
 				if ( props.LinkedTokens ) {
 					props.LinkedTokens = props.LinkedTokens.concat( this._tokens );
 				}
@@ -47,7 +74,8 @@ class DeferredSession extends ILogSession {
 		}
 
 		var _this = this;
-		var session = Object.newArgs( _this._ctor, _this._ctorParams );
+		var ctor = _this._ctor;
+		var session = new ctor( this._ctorLog, this._ctorParentId, this._ctorProps, this._ctorCallback );
 		session.on( 'Session.Opened', function ( err, session ) {
 
 			if ( err ) {
@@ -58,23 +86,21 @@ class DeferredSession extends ILogSession {
 			_this._session = session;
 
 			ProxyEvents( [
-				'Session.Opened',
-				'Session.Open.Error',
 				'Session.Closed',
 				'Session.Idle'
 			], session, _this );
 
-			_this.emit( 'Session.Opened', err, _this )
+			_this.emit( 'Deferred.Flush', err, _this )
 		} );
 	}
 
 	// open real session on first write and assign to all records
-	_onRecordOpen ( record ) {
+	_onRecordNeedsOpen ( record ) {
 		if ( this._session || this._openingSession > 0 ) {
 			return;
 		}
 		this._openingSession = 1;
-		this._log.once( 'Log.Opened', this._onLogOpened.bind( this ) );
+		this._log.once( 'Deferred.Flush', this._onLogOpened.bind( this ) );
 		this.emit( 'Deferred.Open', this );
 	}
 
@@ -101,11 +127,27 @@ class DeferredSession extends ILogSession {
 	}
 
 	getId () {
-		return this._id;
+		var obj = this._session;
+		if ( obj ) {
+			return obj.getId();
+		}
+		return null;
+	}
+
+	getIndex () {
+		var obj = this._session;
+		if ( obj ) {
+			return obj.getIndex();
+		}
+		return null;
 	}
 
 	getParentId () {
-		return this._parentId;
+		var obj = this._session;
+		if ( obj ) {
+			return obj.getParentId();
+		}
+		return null;
 	}
 
 	getStorageUri () {
@@ -132,6 +174,16 @@ class DeferredSession extends ILogSession {
 		return [];
 	}
 
+	setParentSession ( sesionId ) {
+		if ( this._session ) {
+			this._session.setParentSession( sesionId );
+		}
+		else {
+			this._ctorParentId = sesionId;
+		}
+		return this;
+	}
+
 	addLinkedToken ( token ) {
 		if ( this._session ) {
 			this._session.addLinkedToken( token );
@@ -144,6 +196,9 @@ class DeferredSession extends ILogSession {
 
 	openRecord ( props, callback ) {
 		var record = new DeferredRecord( this, props, callback );
+		if ( this._flushArbiter ) {
+			record.setFlushArbiter( this._flushArbiter );
+		}
 		var _this = this;
 		if ( this._session ) {
 			record.on( 'Deferred.Open', function () {
@@ -153,8 +208,8 @@ class DeferredSession extends ILogSession {
 			} );
 		}
 		else {
-			record.on( 'Deferred.Open', this._onRecordOpen.bind( this ) );
-			this.once( 'Session.Opened', function ( err, session ) {
+			record.on( 'Deferred.Open', this._onRecordNeedsOpen.bind( this ) );
+			this.once( 'Deferred.Flush', function ( err, session ) {
 				record.assignSession( session );
 				var records = _this._deferredRecords;
 				records.splice( records.indexOf( record ) );
@@ -172,16 +227,14 @@ class DeferredSession extends ILogSession {
 
 		if ( this._closed ) {
 			if ( callback instanceof Function ) {
-				process.nextTick( function () {
-					callback( null, _this );
-				} );
+				process.nextTick( callback, null, this );
 			}
 			return;
 		}
 
 		if ( !this.isEmpty() ) {
 			var _this = this;
-			this.once( 'Session.Opened', function () {
+			this.once( 'Deferred.Flush', function () {
 				_this.close( callback );
 			} );
 		}
@@ -205,6 +258,21 @@ class DeferredSession extends ILogSession {
 			}
 			else {
 				process.nextTick( callback );
+			}
+		}
+	}
+
+	setFlushArbiter ( arbiter ) {
+		this._flushArbiter = arbiter;
+		return this;
+	}
+
+	flushDeferredLogs () {
+		var logs = this._deferredRecords;
+		for ( var i = logs.length - 1; i >= 0; --i ) {
+			var log = logs[ i ];
+			if ( !log.isFlushed() ) {
+				log.flush();
 			}
 		}
 	}

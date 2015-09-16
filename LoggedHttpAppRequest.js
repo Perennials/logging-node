@@ -1,8 +1,6 @@
 "use strict";
 
 var HttpAppRequest = require( 'App/HttpAppRequest' );
-var FileLog = require( './FileLog' );
-var DeferredRecord = require( './DeferredRecord' );
 var IncomingMessageLogger  = require( './loggers/IncomingMessageLogger' );
 var WritableLogger  = require( './loggers/WritableLogger' );
 var ConsoleLogger  = require( './loggers/ConsoleLogger' );
@@ -15,10 +13,27 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 		super( app, req, res );
 
 		this.Domain.HttpAppRequest = this;
-		
+
 		var _this = this;
 
-		this.LogSession = app.getLog().openSession( req.headers[ 'freedom2-debug-logsession' ], [ 'SESSION_SERVER_REQUEST' ] );
+		var props = [ 'SESSION_SERVER_REQUEST' ];
+		var props2 = this.determineSessionProps();
+		if ( props2 instanceof Array ) {
+			props = props2.concat( props );
+		}
+		else if ( props2 instanceof Object ) {
+			props.push( props2 );
+		}
+
+		this._logPolicy = this.determineLogPolicy();
+		if ( this._logPolicy == 'LOG_NOTHING' ) {
+			this.LogSession = null;
+			this.LogStreams = { Stdout: null, Stderr: null };
+			return;
+		}
+
+		this.LogSession = app.getLog().openSession( props );
+		this.LogSession.setFlushArbiter( this.flushArbiter.bind( this ) );
 
 		// log the server environment
 		LoggedHttpApp = LoggedHttpApp || require( './LoggedHttpApp' );
@@ -40,8 +55,24 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 
 	}
 
+	flushArbiter ( record ) {
+		return true;
+	}
+
+	determineSessionProps () {
+		return null;
+	}
+
+	determineLogPolicy () {
+		// for debugging this can be 'LOG_NOTHING' to disable all logging
+		return 'LOG_ALL';
+	}
+
 	onError ( err ) {
-		this.LogSession.write( err, [ 'RECORD_EXCEPTION', 'DATA_TEXT' ] );
+		var logSession = this.LogSession;
+		if ( logSession ) {
+			logSession.write( err, [ 'RECORD_EXCEPTION', 'DATA_TEXT' ] );
+		}
 		super.onError( err );
 	}
 
@@ -53,8 +84,11 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 				this.LogStreams[ steamName ].close();
 			}
 
-			this.LogSession.close();
-		
+			var logSession = this.LogSession;
+			if ( logSession ) {
+				logSession.close();
+			}
+
 			super.dispose();
 		}
 

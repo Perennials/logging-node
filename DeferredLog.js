@@ -9,11 +9,19 @@ function DeferredLog ( constructor ) {
 	this._ctor = constructor;
 	this._ctorParams = Array.prototype.slice.call( arguments, 1 );
 	this._deferredSessions = [];
+
+	this.emit( 'Log.Opened', null, this );
+	
+	//todo: this is not entirely correct and assumes knowledge about the ctor
+	var callback = this._ctorParams.last;
+	if ( callback instanceof Function ) {
+		process.nextTick( callback, null, this );
+	}
 }
 
 DeferredLog.extend( ILogEngine, {
 
-	_onSessionOpen: function ( session ) {
+	_onSessionNeedsOpen: function ( session ) {
 		var _this = this;
 		var params = this._ctorParams;
 		if ( params.length === 1 && params[ 0 ] instanceof Function ) {
@@ -23,15 +31,13 @@ DeferredLog.extend( ILogEngine, {
 		var log = Object.newArgs( this._ctor, params );
 		log.once( 'Log.Opened', function ( err, log ) {
 			ProxyEvents( [
-				'Log.Opened',
-				'Log.Open.Error',
 				'Log.Closed',
 				'Log.Idle'
 			], log, _this );
 			
 			_this._log = log;
 
-			_this.emit( 'Log.Opened', err, _this );
+			_this.emit( 'Deferred.Flush', err, _this );
 
 		} );
 		
@@ -83,9 +89,9 @@ DeferredLog.extend( ILogEngine, {
 			} );
 		}
 		else {
-			session.on( 'Deferred.Open', this._onSessionOpen.bind( this ) );
+			session.on( 'Deferred.Open', this._onSessionNeedsOpen.bind( this ) );
 		}
-		session.on( 'Session.Opened', function ( err, session ) {
+		session.on( 'Deferred.Flush', function ( err, session ) {
 			var sessions = _this._deferredSessions;
 			sessions.splice( sessions.indexOf( session ), 1 );
 		} );

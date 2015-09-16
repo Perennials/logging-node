@@ -6,6 +6,7 @@ var ILogEngine = require( './ILogEngine' );
 function ILogSession ( log, parentId, props, callback ) {
 	this._log = log;
 	this._id = null;
+	this._index = null;
 	this._parentId = parentId;
 	this._props = props;
 }
@@ -14,6 +15,10 @@ ILogSession.extend( Events.EventEmitter, {
 	
 	getLog: function () {
 		return this._log;
+	},
+
+	getIndex: function () {
+		return this._index;
 	},
 
 	getId: function () {
@@ -33,6 +38,8 @@ ILogSession.extend( Events.EventEmitter, {
 	getOpenRecords: function () {},
 	getLoggedRecords: function () {},
 	openRecord: function ( props, callback ) {},
+	setParentSession: function ( sessionId ) {},
+	addLinkedToken ( token ) {},
 	wait: function ( callback ) {},
 
 	write: function ( data, props, callback ) {
@@ -49,9 +56,7 @@ ILogSession.extend( Events.EventEmitter, {
 		this.openRecord( props, function ( err, record ) {
 			if ( err ) {
 				if ( callback instanceof Function ) {
-					process.nextTick( function () {
-						callback( err, null );
-					} );
+					process.nextTick( callback, err, null );
 				}
 				return;
 			}
@@ -60,12 +65,9 @@ ILogSession.extend( Events.EventEmitter, {
 
 				record.close( function () {
 					if ( callback instanceof Function ) {
-						process.nextTick( function () {
-							callback( err, record );
-						} );
+						process.nextTick( callback, err, record );
 					}
 				} );
-
 			} );
 		} );
 	}

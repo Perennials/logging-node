@@ -29,9 +29,7 @@ function FileLog ( storageUri, callback ) {
 			////
 			_this.emit( 'Log.Opened', err, _this );
 			if ( callback instanceof Function ) {
-				process.nextTick( function () {
-					callback( err, _this );
-				} );
+				process.nextTick( callback, err, _this );
 			}
 		}
 		else {
@@ -49,9 +47,7 @@ function FileLog ( storageUri, callback ) {
 				////
 				_this.emit( 'Log.Opened', err, _this );
 				if ( callback instanceof Function ) {
-					process.nextTick( function () {
-						callback( err, _this );
-					} );
+					process.nextTick( callback, err, _this );
 				}
 			} );
 		}
