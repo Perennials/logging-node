@@ -13,6 +13,8 @@ class PerennialApp extends LoggedHttpApp {
 		}
 		
 		super( appRequest, host, port );
+
+		this._consoleLogger.on( 'Stderr.Open', this._onStderrOpen.bind( this ) );
 	}
 
 	setLogPolicy ( policy ) {
@@ -26,6 +28,16 @@ class PerennialApp extends LoggedHttpApp {
 
 	flushDeferredLogs () {
 		this._logSession.flushDeferredLogs();
+	}
+
+	_onStderrOpen () {
+
+		if ( this._logPolicy == 'LOG_ALL_ON_ERROR' ) {
+			
+			this.setLogPolicy( 'LOG_ALL' );
+			this.flushDeferredLogs();
+
+		}
 	}
 
 }

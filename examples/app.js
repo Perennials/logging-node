@@ -38,7 +38,7 @@ class MyAppRequest extends PerennialAppRequest {
 		this._logStream.write( '<ERROR>Unhandled error "' + err.message + '"</ERROR>\n' );
 
 		// this will be copied to a file in the log session
-		console.error( 'Damn, error happened with this specific client request', this.Request );
+		console.error( 'Damn, error happened with this specific client request', Object.toString( this.Request ) );
 
 		// finish the response so we can close the server
 		this.Response.writeHead( 500, {
@@ -79,7 +79,12 @@ class MyAppRequest extends PerennialAppRequest {
 	}
 }
 
+// this is used for logging outside of a request context
 class MyApp extends PerennialApp {
+
+	determineLogPolicy () {
+		return 'LOG_ALL_ON_ERROR';
+	}
 
 	determineSessionProps () {
 		return { DirectoryFormat: 'myapp-{SessionType}-{SessionIndex}{SessionName}' };
@@ -95,7 +100,9 @@ app.setStorageDir( __dirname );
 
 // log something in the app log session
 console.log( 'Starting to listen on 0.0.0.0:1337' );
+console.error( 'Ops.' );
 app.startListening();
+
 
 setTimeout( function () {
 	require( 'child_process' ).exec( 'curl localhost:1337' );

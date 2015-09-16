@@ -31,10 +31,8 @@ class PerennialAppRequest extends LoggedHttpAppRequest {
 			this.setLogPolicy( 'LOG_ALL' );
 			this.flushDeferredLogs();
 
-			this.App.setLogPolicy( 'LOG_ALL' );
-			this.App.flushDeferredLogs();
 		}
-		super.onError( err );
+		return super.onError( err );
 	}
 }
 

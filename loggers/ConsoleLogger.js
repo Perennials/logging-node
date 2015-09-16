@@ -1,32 +1,38 @@
 "use strict";
 
+var Events = require( 'events' );
+
 // this a bit global functionality
-function ConsoleLogger ( appLogSession ) {
+class ConsoleLogger extends Events.EventEmitter {
+	
+	constructor ( appLogSession ) {
 
-	this._appLogSession = appLogSession;
-	this._consoleBackup = { stdout: {}, stderr: {} };
+		super();
 
-	// defer all log streams - open them on the first write
-	// stdout and stderr are hooked in the LoggedHttpApp class and the call is redirected if there is no domain
-	this._logStreams = {
-		Stdout: appLogSession.openRecord( [ 'STDOUT', 'RECORD_STREAM', 'DATA_TEXT' ] ),
-		Stderr: appLogSession.openRecord( [ 'STDERR', 'RECORD_STREAM', 'DATA_TEXT' ] ),
-	};
+		this._appLogSession = appLogSession;
+		this._consoleBackup = { stdout: {}, stderr: {} };
+		this._stderrEvent = true;
 
-	if ( process.stdout ) {
-		this._writeHook( 'stdout' )
-		this._endHook( 'stdout' )
+		// defer all log streams - open them on the first write
+		// stdout and stderr are hooked in the LoggedHttpApp class and the call is redirected if there is no domain
+		this._logStreams = {
+			Stdout: appLogSession.openRecord( [ 'STDOUT', 'RECORD_STREAM', 'DATA_TEXT' ] ),
+			Stderr: appLogSession.openRecord( [ 'STDERR', 'RECORD_STREAM', 'DATA_TEXT' ] ),
+		};
+
+		if ( process.stdout ) {
+			this._writeHook( 'stdout' )
+			this._endHook( 'stdout' )
+		}
+		
+		if ( process.stderr ) {
+			this._writeHook( 'stderr' )
+			this._endHook( 'stderr' )
+		}
+
 	}
-	if ( process.stderr ) {
-		this._writeHook( 'stderr' )
-		this._endHook( 'stderr' )
-	}
 
-}
-
-ConsoleLogger.define( {
-
-	_writeHook: function ( streamName ) {
+	_writeHook ( streamName ) {
 		var appRqStreamName = streamName[ 0 ].toUpperCase() + streamName.slice( 1 );
 
 		var _this = this;
@@ -39,7 +45,9 @@ ConsoleLogger.define( {
 
 			// call the originall .write() or .end()
 			var ret = originalCall.apply( stream, arguments );
-
+			if ( data == "Ops." ) {
+				debugger;
+			}
 			// call .write() or .end() on the log file
 			var domain = process.domain;
 			var fileStream = null;
@@ -47,14 +55,18 @@ ConsoleLogger.define( {
 				fileStream.write( data );
 			}
 			else if ( fileStream = _this._logStreams[ appRqStreamName ] ) {
+				if ( _this._stderrEvent && appRqStreamName == 'Stderr' ) {
+					_this._stderrEvent = false;
+					_this.emit( 'Stderr.Open' );
+				}
 				fileStream.write( data );
 			}
 
 			return ret;
 		};
-	},
+	}
 
-	_endHook: function ( streamName ) {
+	_endHook ( streamName ) {
 		var appRqStreamName = streamName[ 0 ].toUpperCase() + streamName.slice( 1 );
 		
 		var _this = this;
@@ -82,17 +94,17 @@ ConsoleLogger.define( {
 
 			return ret;
 		};
-	},
+	}
 
 	// if we dont have this and construct new instance it will mess up. need to .close() though
-	_recoverConsoleFunctions: function ( streamName ) {
+	_recoverConsoleFunctions ( streamName ) {
 		var backup = this._consoleBackup[ streamName ];
 		for ( var callName in backup ) {
 			process[ streamName ][ callName ] = backup[ callName ];
 		}
-	},
+	}
 
-	unhook: function () {
+	unhook () {
 		var logStreams = this._logStreams;
 		for ( var name in logStreams ) {
 			logStreams[ name ].close();
@@ -101,9 +113,9 @@ ConsoleLogger.define( {
 		for ( var streamName in this._consoleBackup ) {
 			this._recoverConsoleFunctions( streamName );
 		}
-	},
+	}
 	
 	
-} );
+}
 
 module.exports = ConsoleLogger;

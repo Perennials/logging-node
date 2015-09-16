@@ -145,12 +145,11 @@ class MyAppRequest extends PerennialAppRequest {
 		this._logStream.write( '<log>\n' );
 	}
 
-	// customize options, for the log session that will be created in the constructor
+	// customize options for log session that will be created in the constructor
 	determineSessionProps () {
 		return { DirectoryFormat: 'myapp-{SessionType}-{SessionIndex}{SessionName}' };
 	}
 
-	// determine initial log policy, used in the constructor
 	determineLogPolicy () {
 		return 'LOG_ALL_ON_ERROR';
 	}
@@ -168,7 +167,7 @@ class MyAppRequest extends PerennialAppRequest {
 		this._logStream.write( '<ERROR>Unhandled error "' + err.message + '"</ERROR>\n' );
 
 		// this will be copied to a file in the log session
-		console.error( 'Damn, error happened with this specific client request', this.Request );
+		console.error( 'Damn, error happened with this specific client request', Object.toString( this.Request ) );
 
 		// finish the response so we can close the server
 		this.Response.writeHead( 500, {
@@ -209,9 +208,13 @@ class MyAppRequest extends PerennialAppRequest {
 	}
 }
 
+// this is used for logging outside of a request context
 class MyApp extends PerennialApp {
 
-	// customize options for the log session, that will be created in the constructor
+	determineLogPolicy () {
+		return 'LOG_ALL_ON_ERROR';
+	}
+
 	determineSessionProps () {
 		return { DirectoryFormat: 'myapp-{SessionType}-{SessionIndex}{SessionName}' };
 	}
@@ -226,6 +229,7 @@ app.setStorageDir( __dirname );
 
 // log something in the app log session
 console.log( 'Starting to listen on 0.0.0.0:1337' );
+console.error( 'Ops.' );
 app.startListening();
 ```
 
