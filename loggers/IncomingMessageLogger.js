@@ -1,6 +1,13 @@
 "use strict";
 
-function IncomingMessageLogger ( src, dest ) {
+var Unchunker = require( './Unchunker' );
+
+function IncomingMessageLogger ( src, dest, unchunk ) {
+
+	if ( 0 && unchunk ) {
+		dest = new Unchunker( dest, true );
+	}
+
 	this._src = src;
 	this._dest = dest;
 

@@ -30,7 +30,7 @@ HttpLogger.define( {
 		// this will be called before http.request() returns
 		if ( _lastClientRq !== null ) {
 			// the end hook here is taking care to close() the record
-			new WritableLogger( socket, _lastClientRq.LogSession.openRecord( _lastClientRq.LogRecord.RequestProps ) );
+			new WritableLogger( socket, _lastClientRq.LogSession.openRecord( _lastClientRq.LogRecord.RequestProps ), true );
 			_lastClientRq = null;
 		}
 		return _nodeClientRequestOnSocket.call( this, socket );
@@ -90,7 +90,7 @@ HttpLogger.define( {
 			} );
 
 			// the end hook here is taking care to close() the record
-			new IncomingMessageLogger( response, logSession.openRecord( LogRecord.ResponseProps ) );
+			new IncomingMessageLogger( response, logSession.openRecord( LogRecord.ResponseProps ), true );
 
 		} );
 

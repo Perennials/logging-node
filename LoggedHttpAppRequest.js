@@ -40,10 +40,10 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 		LoggedHttpApp.logServerEnv( this.LogSession );
 		
 		// log req
-		new IncomingMessageLogger( req, this.LogSession.openRecord( [ 'RECORD_SERVER_REQUEST', 'DATA_TEXT' ] ) );
+		new IncomingMessageLogger( req, this.LogSession.openRecord( [ 'RECORD_SERVER_REQUEST', 'DATA_TEXT' ] ), true );
 
 		// log res
-		new WritableLogger( res.connection, this.LogSession.openRecord( [ 'RECORD_SERVER_RESPONSE', 'DATA_TEXT' ] ) );
+		new WritableLogger( res.connection, this.LogSession.openRecord( [ 'RECORD_SERVER_RESPONSE', 'DATA_TEXT' ] ), true );
 
 		// defer all log streams - open them on the first write
 		// stdout and stderr are hooked in the LoggedHttpApp class and the call is redirected to the current domain

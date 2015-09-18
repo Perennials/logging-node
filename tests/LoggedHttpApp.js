@@ -10,7 +10,6 @@ require( 'shelljs/global' );
 
 var logsDir = __dirname + '/testlogs';
 
-
 UnitestA( 'SESSION_APP_RUN no logs', function ( test ) {
 	var app1 = new LoggedHttpApp( null, '127.0.0.1', 55555 );
 	app1.setStorageDir( logsDir );
@@ -23,7 +22,7 @@ UnitestA( 'SESSION_APP_RUN no logs', function ( test ) {
 		// we have no output so no logs should be created
 		test( !(session instanceof FileSession) );
 
-		rm( '-rf', logsDir );
+		Fs.rmdirSync( logsDir );
 		test( !Fs.existsSync( logsDir ) );
 		app1.close( function () {
 			test.out();
@@ -110,10 +109,10 @@ UnitestA( 'LoggedHttpAppRequest logging', function ( test ) {
 		}
 
 		onError ( err ) {
-			// if ( global.errored ) {
-			// 	return;
-			// }
-			// global.errored = true;
+			if ( global.errored ) {
+				return;
+			}
+			global.errored = true;
 			var _this = this;
 			this.Response.write( '123' );
 			this.Response.end( '456' );
@@ -159,6 +158,7 @@ UnitestA( 'LoggedHttpAppRequest logging', function ( test ) {
 	(new HttpRequest( 'http://127.0.0.1:55555' ))
 		.setOptions( { LogRecord: { RequestProps: [ 'rq' ], ResponseProps: [ 'rs' ] } } )
 		.setHeader( 'someting', 'custom' )
+		.setHeader( 'content-encoding', 'gzip' )
 		.send( 'asd.qwe' );
 
 } );

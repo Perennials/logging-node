@@ -218,12 +218,11 @@ UnitestA( 'FileSession.wait()', function ( test ) {
 			session.wait( function () {
 				var records = session.getLoggedRecords();
 				test( records.length == 3 );
-				session.close( function () {
-					rm( '-rf', dir );
-				} );
+				session.close();
 			} );
 
 			log.wait( function () {
+				rm( '-rf', dir );
 				test.out();
 			} );
 		} );

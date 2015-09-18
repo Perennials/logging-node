@@ -1074,7 +1074,8 @@ TODO
 - Right now LoggedHttpApp.close() closes the server and if there are unflushed
   deferred records and they are not of process of being flushed (i.e. there
   are no io operations in node's queue), node will exit and the logging will
-  be lost.
+  be lost. This is inconsistent because if there is opened record the app will
+  not close until the record is closed.
 - Would be cool to have BlackHole logging classes.
 &nbsp;  
 - Split docs into different files? This one is too long.
