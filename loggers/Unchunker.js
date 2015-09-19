@@ -28,6 +28,10 @@ class Unchunker {
 		var length = 0;
 		var last = headers.last;
 
+		if ( headers[ 0 ].startsWith( 'GET' ) ) {
+			return true;
+		}
+
 		if ( last.indexOf( TRAILER ) ) {
 			return true;
 		}
@@ -125,7 +129,15 @@ class Unchunker {
 			return;
 		}
 		
-		headers = headers.join( '' ).splitFirst( TRAILER );
+		headers = headers.join( '' );
+		// nothing to do for get
+		if ( headers.startsWith( 'GET' ) ) {
+			this.write = this._dest.write.bind( this._dest );
+			this.write( headers );
+			return;
+		}
+
+		headers = headers.splitFirst( TRAILER );
 		var message = headers.right;
 		headers = headers.left;
 
@@ -145,10 +157,10 @@ class Unchunker {
 		else if ( encoding == 'deflate' ) {
 			this._zlib = Zlib.createInflate();
 		}
-
-		// if ( this._zlib ) {
-		// 	this._zlib.on( 'data', this._onZlibChunk.bind( this ) );
-		// }
+		if ( encoding !== undefined ) {
+			newheaders[ 'x-logging-node-original-content-encoding' ] = encoding;
+			newheaders[ 'content-encoding' ] = 'identity';
+		}
 
 		var len = newheaders[ 'content-length' ];
 		if ( len !== undefined && this._zlib === null ) {
@@ -163,11 +175,12 @@ class Unchunker {
 		}
 
 		// don't need this anymore
-		// this._headers = null;
+		this._headers = null;
 
+		if ( len !== undefined ) {
+			newheaders[ 'x-logging-node-original-content-length' ] = len;
+		}
 		newheaders[ 'content-length' ] = ' '.repeat( PADDING ); //some padding that we will change later;
-		newheaders[ 'x-logging-node-original-content-encoding' ] = encoding;
-		newheaders[ 'content-encoding' ] = 'identity';
 
 		encoding = newheaders[ 'transfer-encoding' ];
 		if ( encoding !== undefined ) {
