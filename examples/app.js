@@ -8,21 +8,20 @@ class MyAppRequest extends PerennialAppRequest {
 
 	constructor ( app, req, res ) {
 		// call the parent constructor
-		super( app, req, res );
+		// customize options for log session that will be created in the constructor
+		var logOptions = {
+			LogPolicy: app.getLogPolicy(),
+			SessionProps: {
+				DirectoryFormat: 'myapp-{SessionType}-{SessionIndex}{SessionName}'
+			},
+			UnchunkHttp: true
+		};
+		super( app, req, res, logOptions );
 
 		// open a log stream, that is file, in which we can write data
 		// don't forget to close it or our app will not close
-		this._logStream = this.LogSession.openRecord( [ 'RECORD_STREAM', 'DATA_XML' ] );
+		this._logStream = this._logSession.openRecord( [ 'RECORD_STREAM', 'DATA_XML' ] );
 		this._logStream.write( '<log>\n' );
-	}
-
-	// customize options for log session that will be created in the constructor
-	determineSessionProps () {
-		return { DirectoryFormat: 'myapp-{SessionType}-{SessionIndex}{SessionName}' };
-	}
-
-	determineLogPolicy () {
-		return 'LOG_ALL_ON_ERROR';
 	}
 
 	// make sure we clean what we have opened
@@ -38,13 +37,13 @@ class MyAppRequest extends PerennialAppRequest {
 		this._logStream.write( '<ERROR>Unhandled error "' + err.message + '"</ERROR>\n' );
 
 		// this will be copied to a file in the log session
-		console.error( 'Damn, error happened with this specific client request', Object.toString( this.Request ) );
+		console.error( 'Damn, error happened with this specific client request', Object.toString( this._request ) );
 
 		// finish the response so we can close the server
-		this.Response.writeHead( 500, {
+		this._response.writeHead( 500, {
 			'Connection': 'close',
 		} );
-		this.Response.end();
+		this._response.end();
 		this.cleanup();
 
 		// call the default handler, which will log the error and abort the app
@@ -59,19 +58,19 @@ class MyAppRequest extends PerennialAppRequest {
 		this._logStream.write( '<INFO>HTTP request received</INFO>\n' );
 
 		// write a log record in the context of the HTTP request
-		this.LogSession.write( { some: 'json' }, [ 'MyRecord', 'RECORD_GENERIC','DATA_JSON' ] )
+		this._logSession.write( { some: 'json' }, [ 'MyRecord', 'RECORD_GENERIC','DATA_JSON' ] )
 
 		// we have the full request at this point, headers and content
-		console.log( 'A request came from', this.Request.headers[ 'user-agent' ], '.' );
+		console.log( 'A request came from', this._request.headers[ 'user-agent' ], '.' );
 
-		doSomethingWithThe( this.Request, function ( good ) {
+		doSomethingWithThe( this._request, function ( good ) {
 
 			// normal nodejs handling of the response
-			this.Response.writeHead( good ? 200 : 500, {
+			this._response.writeHead( good ? 200 : 500, {
 				'Connection': 'close',
 				'Content-Type': 'text/plain'
 			} );
-			this.Response.end( 'bye' );
+			this._response.end( 'bye' );
 			this.cleanup();
 
 		} );
@@ -82,21 +81,23 @@ class MyAppRequest extends PerennialAppRequest {
 // this is used for logging outside of a request context
 class MyApp extends PerennialApp {
 
-	determineLogPolicy () {
-		return 'LOG_ALL_ON_ERROR';
-	}
-
-	determineSessionProps () {
-		return { DirectoryFormat: 'myapp-{SessionType}-{SessionIndex}{SessionName}' };
+	constructor ( appRequest, host, port ) {
+		var logOptions = {
+			LogPolicy: 'LOG_ALL_ON_ERROR',
+			SessionProps: {
+				DirectoryFormat: 'myapp-{SessionType}-{SessionIndex}{SessionName}'
+			},
+			UnchunkHttp: true,
+			// log sessions will be written in this directory, or the temp directory
+			StorageDir: __dirname
+		};
+		super( appRequest, host, port, logOptions );
 	}
 }
 
 
 // construct a new HttpApp, tell it our request class is MyAppRequest
 var app = new MyApp( MyAppRequest, '0.0.0.0', 1337 );
-
-// log sessions will be written in this directory, or the temp directory
-app.setStorageDir( __dirname );
 
 // log something in the app log session
 console.log( 'Starting to listen on 0.0.0.0:1337' );

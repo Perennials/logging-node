@@ -16,20 +16,23 @@ The implementation is in `BETA` stage.
 	- [PerennialApp](#perennialapp)
 		- [Methods](#methods)
 			- [Constructor](#constructor)
+			- [.initLogging()](#initlogging)
 			- [.getLog()](#getlog)
 			- [.getLogSession()](#getlogsession)
-			- [.setStorageDir() / .getStorageDir()](#setstoragedir--getstoragedir)
+			- [.setLogPolicy() / .getLogPolicy()](#setlogpolicy--getlogpolicy)
 			- [.onClose()](#onclose)
 		- [Logging HTTP requests](#logging-http-requests)
 			- [Disabling the logging of a specific request](#disabling-the-logging-of-a-specific-request)
 			- [Specifying options for the log record](#specifying-options-for-the-log-record)
 	- [PerennialAppRequest](#perennialapprequest)
-		- [Public properties](#public-properties)
 		- [Methods](#methods-1)
 			- [Constructor](#constructor-1)
+			- [.initLogging()](#initlogging-1)
+			- [.getLogSession()](#getlogsession-1)
+			- [.getLogStream()](#getlogstream)
+			- [.setLogPolicy() / .getLogPolicy()](#setlogpolicy--getlogpolicy-1)
 			- [.dispose()](#dispose)
 			- [.onError()](#onerror)
-			- [.determineSessionProps()](#determinesessionprops)
 	- [FileLog](#filelog)
 		- [Methods](#methods-2)
 			- [Constructor](#constructor-2)
@@ -114,14 +117,14 @@ npm install https://github.com/Perennials/logging-node/tarball/master
 Example
 -------
 
-The module provides the [PerennialApp](#loggedhttpapp) class which implements
+The module provides the [PerennialApp](#perennialapp) class which implements
 domain and error handling, as well as hooking of the console output and HTTP
 requests. The low level logging classes can be used separately but the
 automatic logging capabilities will remain unused. Running this example (it
 can be found in the examples directory) and requesting `localhost:1337` will
 create log session with a bunch of records.
 
-The [PerennialApp](#loggedhttpapp) class extends
+The [PerennialApp](#perennialapp) class extends
 [HttpApp](https://github.com/Perennials/app-node#httpapp) of the [App
 module](https://github.com/Perennials/app-node). Check the links for
 explanation of the concept of reusing the `HttpApp` class.
@@ -137,21 +140,20 @@ class MyAppRequest extends PerennialAppRequest {
 
 	constructor ( app, req, res ) {
 		// call the parent constructor
-		super( app, req, res );
+		// customize options for log session that will be created in the constructor
+		var logOptions = {
+			LogPolicy: app.getLogPolicy(),
+			SessionProps: {
+				DirectoryFormat: 'myapp-{SessionType}-{SessionIndex}{SessionName}'
+			},
+			UnchunkHttp: true
+		};
+		super( app, req, res, logOptions );
 
 		// open a log stream, that is file, in which we can write data
 		// don't forget to close it or our app will not close
-		this._logStream = this.LogSession.openRecord( [ 'RECORD_STREAM', 'DATA_XML' ] );
+		this._logStream = this._logSession.openRecord( [ 'RECORD_STREAM', 'DATA_XML' ] );
 		this._logStream.write( '<log>\n' );
-	}
-
-	// customize options for log session that will be created in the constructor
-	determineSessionProps () {
-		return { DirectoryFormat: 'myapp-{SessionType}-{SessionIndex}{SessionName}' };
-	}
-
-	determineLogPolicy () {
-		return 'LOG_ALL_ON_ERROR';
 	}
 
 	// make sure we clean what we have opened
@@ -167,13 +169,13 @@ class MyAppRequest extends PerennialAppRequest {
 		this._logStream.write( '<ERROR>Unhandled error "' + err.message + '"</ERROR>\n' );
 
 		// this will be copied to a file in the log session
-		console.error( 'Damn, error happened with this specific client request', Object.toString( this.Request ) );
+		console.error( 'Damn, error happened with this specific client request', Object.toString( this._request ) );
 
 		// finish the response so we can close the server
-		this.Response.writeHead( 500, {
+		this._response.writeHead( 500, {
 			'Connection': 'close',
 		} );
-		this.Response.end();
+		this._response.end();
 		this.cleanup();
 
 		// call the default handler, which will log the error and abort the app
@@ -188,19 +190,19 @@ class MyAppRequest extends PerennialAppRequest {
 		this._logStream.write( '<INFO>HTTP request received</INFO>\n' );
 
 		// write a log record in the context of the HTTP request
-		this.LogSession.write( { some: 'json' }, [ 'MyRecord', 'RECORD_GENERIC','DATA_JSON' ] )
+		this._logSession.write( { some: 'json' }, [ 'MyRecord', 'RECORD_GENERIC','DATA_JSON' ] )
 
 		// we have the full request at this point, headers and content
-		console.log( 'A request came from', this.Request.headers[ 'user-agent' ], '.' );
+		console.log( 'A request came from', this._request.headers[ 'user-agent' ], '.' );
 
-		doSomethingWithThe( this.Request, function ( good ) {
+		doSomethingWithThe( this._request, function ( good ) {
 
 			// normal nodejs handling of the response
-			this.Response.writeHead( good ? 200 : 500, {
+			this._response.writeHead( good ? 200 : 500, {
 				'Connection': 'close',
 				'Content-Type': 'text/plain'
 			} );
-			this.Response.end( 'bye' );
+			this._response.end( 'bye' );
 			this.cleanup();
 
 		} );
@@ -211,21 +213,23 @@ class MyAppRequest extends PerennialAppRequest {
 // this is used for logging outside of a request context
 class MyApp extends PerennialApp {
 
-	determineLogPolicy () {
-		return 'LOG_ALL_ON_ERROR';
-	}
-
-	determineSessionProps () {
-		return { DirectoryFormat: 'myapp-{SessionType}-{SessionIndex}{SessionName}' };
+	constructor ( appRequest, host, port ) {
+		var logOptions = {
+			LogPolicy: 'LOG_ALL_ON_ERROR',
+			SessionProps: {
+				DirectoryFormat: 'myapp-{SessionType}-{SessionIndex}{SessionName}'
+			},
+			UnchunkHttp: true,
+			// log sessions will be written in this directory, or the temp directory
+			StorageDir: __dirname
+		};
+		super( appRequest, host, port, logOptions );
 	}
 }
 
 
 // construct a new HttpApp, tell it our request class is MyAppRequest
 var app = new MyApp( MyAppRequest, '0.0.0.0', 1337 );
-
-// log sessions will be written in this directory, or the temp directory
-app.setStorageDir( __dirname );
 
 // log something in the app log session
 console.log( 'Starting to listen on 0.0.0.0:1337' );
@@ -294,7 +298,7 @@ The meaning of the keys and values is explained
 Extends [HttpApp](https://github.com/Perennials/app-node#httpapp). This is the
 main application class. It takes care of hooking the console output and HTTP
 requests of the application. The logging is domain aware and cooperates with
-[PerennialAppRequest](#loggedhttpapprequest) - so the logs will be saved in
+[PerennialAppRequest](#perennialapprequest) - so the logs will be saved in
 the context of the current `PerennialAppRequest`, if any. If there is no
 current request context the logs will be saved in the application level log
 session.
@@ -309,16 +313,20 @@ var PerennialApp = require( 'Logging/PerennialApp' );
 #### Methods
 
 - [Constructor](#constructor)
+- [.initLogging()](#initlogging)
 - [.getLog()](#getlog)
 - [.getLogSession()](#getlogsession)
-- [.setStorageDir() / .getStorageDir()](#setstoragedir--getstoragedir)
+- [.setLogPolicy() / .getLogPolicy()](#setlogpolicy--getlogpolicy)
 - [.onClose()](#onclose)
 
 
 ##### Constructor
 The `appRequest` parameter is a constructor for a class derived
-`PerennialAppRequest`. The rest of the parameter are used when creating an
-HTTP server and are passed directly to `http.Server.listen()`.
+`PerennialAppRequest`. The `host` and `port` parameters are used when creating an
+HTTP server and are passed directly to `http.Server.listen()`. The `logOptions`,
+if provided, is passed to [.initLogging()](#initlogging), otherwise logging will not
+be initialized until `.initLogging()` is called. To initialize logging in the constructor
+with the default options pass an empty object `{}`.
 
 The constructor will instantiate an empty
 [Config](https://github.com/Perennials/app-node#config) object.
@@ -326,11 +334,8 @@ The constructor will instantiate an empty
 The constructor will create a [DeferredLog](#deferredlog) and
 [DeferredSession](#deferredsession). That is an application log session. Log
 outside the context of an HTTP request (i.e.
-[PerennialAppRequest](#loggedhttpapprequest)) will be saved in this session.
-The session directory will only be created if any data is actually logged. It
-will be created in the location pointed by
-[.setStorageDir()](#setstoragedir--getstoragedir), or default to the system's
-temp directory.
+[PerennialAppRequest](#perennialapprequest)) will be saved in this session.
+The session directory will only be created if any data is actually logged.
 
 **Remarks:** Upon constructing an instance all console output and HTTP
 requests will be hooked. The side effect of this is that two instances of this
@@ -342,10 +347,44 @@ properly.
 ```js
 new PerennialApp (
 	appRequest:HttpAppRequest,
-	host:String
-	port:Number
+	host:String,
+	port:Number,
+	logOptions:Object|undefined
 );
 ```
+
+##### .initLogging()
+Initializes the logging.
+
+```js
+.initLogging(
+	options:Object|undefined
+);
+```
+
+The options object accepts the following form, where no option is mandatory:
+
+```js
+{
+	StorageDir: String,
+	SessionProps: Object|Array,
+	LogPolicy: String,
+	LogEnvironment: bool,
+	LogConsole: bool,
+	LogHttp: bool,
+	UnchunkHttp: bool,
+}
+```
+
+Property | Description
+:------- | :----------
+`StorageDir` | Where log sessions will be created. If not provided the system temp dir will be used.
+`SessionProps` | Properties for creating the log session.
+`LogPolicy` | `'LOG_ALL'`, `'LOG_NOTHING'`, `'LOG_ALL_ON_ERROR'`. The default is `'LOG_ALL'`. `'LOG_ALL_ON_ERROR'` will buffer the logs and flush them only if some error happens, otherwise they will be discarded when the log session is closed. Buffering the records may increase the memory usage of the application, but will probably result in better performance than `'LOG_ALL'`.
+`LogEnvironment` | If this is `false` the process environment will not be logged. Defaults to `true`.
+`LogConsole` | If this is `false` the `console.log()` and `console.error()` calls will not be intercepted and logged. Defaults to `true`.
+`LogHttp` | If this is `false` HTTP requests will not be intercepted and logged. Defaults to `true`.
+`UnchunkHttp` | If this is `true` HTTP requests/responses will be converted to human readable format before they are logged - this means chunking and compression will be removed. Defaults to `false`, which will log the HTTP requests/responses unaltered. Changing this may also have performance implications due to additional processing.
 
 
 ##### .getLog()
@@ -363,17 +402,19 @@ Retrieves the log session associated with the application.
 .getLogSession() : DeferredSession;
 ```
 
-
-##### .setStorageDir() / .getStorageDir()
-Determines where logs are to be stored. This is passed to the underlying
-`FileLog` and must be called before any logs are written.
+##### .setLogPolicy() / .getLogPolicy()
+Sets the logging policy for the object. Valid policies are `'LOG_ALL'`,
+`'LOG_NOTHING'` and `'LOG_ALL_ON_ERROR'`. The meaning of these options is
+described in [.initLogging()](#initlogging).
 
 ```js
-.setStorageDir(
-	dir:String
+.setLogPolicy(
+	policy:String
 ) : this;
+```
 
-.getStorageDir() : String|null;
+```js
+.getLogPolicy() : String;
 ```
 
 
@@ -387,7 +428,7 @@ created by the application and the `PerennialAppRequest`s.
 
 
 #### Logging HTTP requests
-Normally HTTP requests will be hooked by the [PerennialApp](#loggedhttpapp)
+Normally HTTP requests will be hooked by the [PerennialApp](#perennialapp)
 class and will be logged automatically. One can control the logging of these
 requests by placing a property called `LogRecord` inside the options passed to
 node's `http.request()` function.
@@ -416,7 +457,9 @@ If the `LogRecord.RequestProps` and `LogRecord.ResponseProps` is an object or
 an array, it will be passed directly to the [.openRecord()](#openrecord)
 function. Changing the data type or the record type is not recommended, but
 one can change the name in order to be able to identify a specific request
-easily.
+easily. `LogRecord.UnchunkHttp`, if defined, can be used to override this
+option, which is otherwise passed when the log session is created, on
+per-request basis.
 
 ```js
 var http = require( 'http' );
@@ -426,7 +469,8 @@ var request = http.request( {
 	port: 80,
 	LogRecord: { 
 		RequestProps: { Name: 'MyRequest' }, 
-		ResponseProps: { Name: 'MyResponse' }
+		ResponseProps: { Name: 'MyResponse' },
+		UnchunkHttp: false
 	}
 } );
 // ...
@@ -444,37 +488,76 @@ request.
 var PerennialAppRequest = require( 'Logging/PerennialAppRequest' );
 ```
 
-- [Public properties](#public-properties)
-- [Methods](#methods-1)
-
-#### Public properties
-
-```js
-{
-	LogSession: DeferredSession
-	LogStreams: {
-		Stdout: DeferredRecord,
-		Stderr: DeferredRecord
-	}
-}
-```
-
 #### Methods
 
 - [Constructor](#constructor-1)
+- [.initLogging()](#initlogging-1)
+- [.getLogSession()](#getlogsession-1)
+- [.getLogStream()](#getlogstream)
+- [.setLogPolicy() / .getLogPolicy()](#setlogpolicy--getlogpolicy-1)
 - [.dispose()](#dispose)
 - [.onError()](#onerror)
 
 ##### Constructor
 Should not be used directly, but only called in the constructor of the derived
 classes in order to perform the default initialization and domain handling.
+The `logOptions`, if provided, is passed to [.initLogging()](#initlogging-1),
+otherwise logging will not be initialized until `.initLogging()` is called. To
+initialize logging in the constructor with the default options pass an empty
+object `{}`.
 
 ```js
 new PerennialAppRequest(
 	app: PerennialApp,
-	req: http.IncommingMessage,
-	res: http.ServerResponse,
+	req: IncommingMessage,
+	res: ServerResponse,
+	logOptions:Object|undefined
 );
+```
+
+##### .initLogging()
+Initializes the logging in the context of this request.
+
+```js
+.initLogging(
+	options:Object|undefined
+);
+```
+
+The options are the same as with [PerennialApp.initLogging()](#initlogging),
+except for `StorageDir`, which is not a valid option here.
+
+
+##### .getLogSession()
+Retrieves the log session associated with the request.
+
+```js
+.getLogSession() : DeferredSession|null;
+```
+
+##### .getLogStream()
+Retrieves the log stream used for logging the console. The name is either
+`Stdout` or `Stderr`.
+
+```js
+.getLogStream(
+	name:String
+) : DeferredRecord|null;
+```
+
+##### .setLogPolicy() / .getLogPolicy()
+Sets the logging policy for the object. Valid policies are `'LOG_ALL'`,
+`'LOG_NOTHING'` and `'LOG_ALL_ON_ERROR'`. The meaning of these options is
+described in [.initLogging()](#initlogging).
+
+```js
+.setLogPolicy(
+	policy:String
+) : this;
+```
+
+```js
+.getLogPolicy() : String;
 ```
 
 ##### .dispose()
@@ -495,20 +578,11 @@ session and then call the parent handler which will print the error to
 .onError( err:Error );
 ```
 
-##### .determineSessionProps()
-This function can be overloaded in derived classes. The return value will
-be used as properties creating the log session. The return value can be
-anything accepted by [FileLog.openSession()](#opensession).
-
-```js
-.determineSessionProps() : (String|Object)[]|Object|null;
-```
-
 
 ### FileLog
 This class is part of the low-level API and normally shouldn't be used
-directly, but only via [PerennialApp](#loggedhttpapp) and
-[PerennialAppRequest](#loggedhttpapprequest).
+directly, but only via [PerennialApp](#perennialapp) and
+[PerennialAppRequest](#perennialapprequest).
 
 ```js
 var FileLog = require( 'Logging/FileLog' );
@@ -631,8 +705,8 @@ function (
 
 ### FileSession
 This class is part of the low-level API and normally shouldn't be used
-directly, but only via [PerennialApp](#loggedhttpapp) and
-[PerennialAppRequest](#loggedhttpapprequest).
+directly, but only via [PerennialApp](#perennialapp) and
+[PerennialAppRequest](#perennialapprequest).
 
 ```js
 var FileSession = require( 'Logging/FileSession' );
@@ -861,8 +935,8 @@ function (
 
 ### FileRecord
 This class is part of the low-level API and normally shouldn't be used
-directly, but only via [PerennialApp](#loggedhttpapp) and
-[PerennialAppRequest](#loggedhttpapprequest).
+directly, but only via [PerennialApp](#perennialapp) and
+[PerennialAppRequest](#perennialapprequest).
 
 ```js
 var FileRecord = require( 'Logging/FileRecord' );
@@ -1008,8 +1082,8 @@ will result in errors.
 #### DeferredLog
 
 This class is part of the low-level API and normally shouldn't be used
-directly, but only via [PerennialApp](#loggedhttpapp) and
-[PerennialAppRequest](#loggedhttpapprequest).
+directly, but only via [PerennialApp](#perennialapp) and
+[PerennialAppRequest](#perennialapprequest).
 
 This class exposes the same methods and events as the [FileLog](#filelog),
 except for `.getStorageUri()`. All callbacks and events will receive
@@ -1027,8 +1101,8 @@ var DeferredLog = require( 'Logging/DeferredLog' );
 #### DeferredSession
 
 This class is part of the low-level API and normally shouldn't be used
-directly, but only via [PerennialApp](#loggedhttpapp) and
-[PerennialAppRequest](#loggedhttpapprequest).
+directly, but only via [PerennialApp](#perennialapp) and
+[PerennialAppRequest](#perennialapprequest).
 
 This class exposes the same methods and events as the
 [FileSession](#filesession). All callbacks and events will receive references
@@ -1046,8 +1120,8 @@ var DeferredSession = require( 'Logging/DeferredSession' );
 #### DeferredRecord
 
 This class is part of the low-level API and normally shouldn't be used
-directly, but only via [PerennialApp](#loggedhttpapp) and
-[PerennialAppRequest](#loggedhttpapprequest).
+directly, but only via [PerennialApp](#perennialapp) and
+[PerennialAppRequest](#perennialapprequest).
 
 This class exposes the same methods and events as the
 [FileRecord](#filerecord). All callbacks and events will receive references to
@@ -1066,17 +1140,15 @@ var DeferredRecord = require( 'Logging/DeferredRecord' );
 TODO
 ----
 
-- There should be a flag if to log HTTP messages in human format or mirror.
-  Human means to remove the chunked encoding and unzip before writing to the file.
 - Keep memory stats somehow?
-- Keep timings of the requests.
+- Keep timings of the requests.  
 &nbsp;  
 - Right now LoggedHttpApp.close() closes the server and if there are unflushed
   deferred records and they are not of process of being flushed (i.e. there
   are no io operations in node's queue), node will exit and the logging will
   be lost. This is inconsistent because if there is opened record the app will
   not close until the record is closed.
-- Would be cool to have BlackHole logging classes.
+- Would be cool to have BlackHole logging classes.  
 &nbsp;  
 - Split docs into different files? This one is too long.
 

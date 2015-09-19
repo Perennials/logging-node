@@ -4,7 +4,7 @@ var LoggedHttpApp = require( './LoggedHttpApp' );
 
 class PerennialApp extends LoggedHttpApp {
 	
-	constructor ( appRequest, host, port ) {
+	constructor ( appRequest, host, port, options ) {
 		
 		if ( arguments.length == 2 ) {
 			port = host;
@@ -12,14 +12,14 @@ class PerennialApp extends LoggedHttpApp {
 			appRequest = PerennialAppRequest;
 		}
 		
-		super( appRequest, host, port );
-
-		this._consoleLogger.on( 'Stderr.Open', this._onStderrOpen.bind( this ) );
+		super( appRequest, host, port, options );
 	}
 
-	setLogPolicy ( policy ) {
-		this._logPolicy = policy;
-		return this;
+	initLogging ( options ) {
+		super.initLogging( options );
+		if ( this._consoleLogger ) {
+			this._consoleLogger.on( 'Stderr.Open', this._onStderrOpen.bind( this ) );
+		}
 	}
 
 	flushArbiter ( record ) {

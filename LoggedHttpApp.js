@@ -15,56 +15,77 @@ var HttpLogger = require( './loggers/HttpLogger' );
 
 class LoggedHttpApp extends HttpApp {
 
-	constructor ( appRequest, host, port ) {
+	constructor ( appRequest, host, port, loggingOptions ) {
 		
 		super( appRequest || LoggedHttpAppRequest, host, port )
 		
-		this._storageDir = null;
+		this._logPolicy = 'LOG_ALL';
+		this._log = null;
+		this._logSession = null;
+		this._logEnv = null;
+		this._consoleLogger = null;
+		this._httpLogger = null;
 
-		this._logPolicy = this.determineLogPolicy();
-		if ( this._logPolicy == 'LOG_NOTHING' ) {
-			this._log = null;
-			this._logSession = null;
-			this._consoleLogger = null;
-			this._httpLogger = null;
-			return;
+		if ( Object.isObject( loggingOptions ) ) {
+			this.initLogging( loggingOptions );
+		}
+
+	}
+
+	setLogPolicy ( policy ) {
+		this._logPolicy = policy;
+		return this;
+	}
+
+	getLogPolicy () {
+		return this._logPolicy;
+	}
+
+	initLogging ( options ) {
+
+		options = Object.isObject( options ) ? options : {};
+
+		if ( String.isString( options.LogPolicy ) ) {
+			this.setLogPolicy( options.LogPolicy );
 		}
 
 		var props = [ 'SESSION_APP_RUN' ];
-		var props2 = this.determineSessionProps();
-		if ( props2 instanceof Array ) {
-			props = props2.concat( props );
+		var sessionProps = options.SessionProps;
+		if ( sessionProps instanceof Array ) {
+			props = sessionProps.concat( props );
 		}
-		else if ( props2 instanceof Object ) {
-			props.push( props2 );
+		else if ( sessionProps instanceof Object ) {
+			props.push( sessionProps );
 		}
 
-		this._log = new DeferredLog( FileLog, (function() { return [ this.getStorageDir() ]; }).bind( this ) );
+		this._log = new DeferredLog( FileLog, options.StorageDir );
 		this._logSession = this._log.openSession( props );
 		this._logSession.setFlushArbiter( this.flushArbiter.bind( this ) );
-		this._logEnv = this._logSession.openRecord( [ 'RECORD_SERVER_ENV', 'DATA_JSON' ] );
 
-		var _this = this;
-		this._logSession.once( 'Deferred.Flush', function ( err, session ) {
-			LoggedHttpApp.logServerEnv( _this._logEnv );
-			_this._logEnv.close();
-			_this._logEnv = null;
-		} );
+		if ( options.EnvLogging !== false ) {
+			
+			this._logEnv = this._logSession.openRecord( [ 'RECORD_SERVER_ENV', 'DATA_JSON' ] );
 
-		// hijack stdout/stderr so all console.log() and similar can be intercepted
-		this._consoleLogger = new ConsoleLogger( this._logSession );
-		// hijack the http module
-		this._httpLogger = new HttpLogger( this._logSession );
+			var _this = this;
+			this._logSession.once( 'Deferred.Flush', function ( err, session ) {
+				LoggedHttpApp.logServerEnv( _this._logEnv );
+				_this._logEnv.close();
+				_this._logEnv = null;
+			} );
+		
+		}
 
-	}
+		if ( options.LogConsole !== false ) {
+			// hijack stdout/stderr so all console.log() and similar can be intercepted
+			this._consoleLogger = new ConsoleLogger( this._logSession );
+		}
 
-	determineSessionProps () {
-		return null;
-	}
+		if ( options.LogHttp !== false ) {
+			// hijack the http module
+			this._httpLogger = new HttpLogger( this._logSession, options.UnchunkHttp );
+		}
 
-	determineLogPolicy () {
-		// for debugging this can be 'LOG_NOTHING' to disable all logging
-		return 'LOG_ALL';
+
 	}
 
 	flushArbiter ( record ) {
@@ -75,28 +96,9 @@ class LoggedHttpApp extends HttpApp {
 		return this._log;
 	}
 
-	getStorageDir () {
-		return this._storageDir;
+	getLogSession () {
+		return this._logSession;
 	}
-
-	setStorageDir ( dir ) {
-		this._storageDir = dir;
-		return this;
-	}
-	
-
-	getLogSession ( callback ) {
-		var session = this._logSession;
-		if ( !session.isEmpty() && session.getLogSession() === null ) {
-			session.once( 'Deferred.Flush', function ( err, session ) {
-				process.nextTick( callback, err, session );
-			} )
-		}
-		else {
-			process.nextTick( callback, null, this._logSession );
-		}
-	}
-
 
 	// cleanup and then wait for all loggers to finish
 	onClose ( acallback ) {
@@ -156,8 +158,12 @@ class LoggedHttpApp extends HttpApp {
 			// so make sure we try to finalize and close everything after the .end() call
 			for ( var i = requests.length - 1; i >= 0; --i ) {
 				var request = requests[ i ];
-				request.LogSession.once( 'Session.Closed', endLogger );
+				request.getLogSession().once( 'Session.Closed', endLogger );
 				request.dispose();
+			}
+
+			if ( activeLoggers === 0 ) {
+				process.nextTick( callback );
 			}
 
 		} );

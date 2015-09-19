@@ -4,7 +4,7 @@ var Unchunker = require( './Unchunker' );
 
 function IncomingMessageLogger ( src, dest, unchunk ) {
 
-	if ( 0 && unchunk ) {
+	if ( unchunk ) {
 		dest = new Unchunker( dest, true );
 	}
 

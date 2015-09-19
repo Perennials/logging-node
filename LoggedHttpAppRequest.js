@@ -8,68 +8,93 @@ var LoggedHttpApp = null;
 
 class LoggedHttpAppRequest extends HttpAppRequest {
 
-	constructor ( app, req, res ) {
+	constructor ( app, req, res, loggingOptions ) {
 		
 		super( app, req, res );
 
-		this.Domain.HttpAppRequest = this;
+		this._domain.HttpAppRequest = this;
+
+		this._logPolicy = 'LOG_ALL';
+
+		// this is public because LoggedHttpApp needs it
+		this._logSession = null;
+		this._logStreams = { Stdout: null, Stderr: null };
+
+		if ( Object.isObject( loggingOptions ) ) {
+			this.initLogging( loggingOptions );
+		}
+
+	}
+
+	setLogPolicy ( policy ) {
+		this._logPolicy = policy;
+		return this;
+	}
+
+	getLogPolicy () {
+		return this._logPolicy;
+	}
+
+	getLogSession () {
+		return this._logSession;
+	}
+
+	getLogStream ( name ) {
+		return this._logStreams[ name ];
+	}
+
+	initLogging ( options ) {
+		options = Object.isObject( options ) ? options : {};
+
+		if ( String.isString( options.LogPolicy ) ) {
+			this.setLogPolicy( options.LogPolicy );
+		}
 
 		var _this = this;
 
 		var props = [ 'SESSION_SERVER_REQUEST' ];
-		var props2 = this.determineSessionProps();
-		if ( props2 instanceof Array ) {
-			props = props2.concat( props );
+		var sessionProps = options.SessionProps;
+		if ( sessionProps instanceof Array ) {
+			props = sessionProps.concat( props );
 		}
-		else if ( props2 instanceof Object ) {
-			props.push( props2 );
-		}
-
-		this._logPolicy = this.determineLogPolicy();
-		if ( this._logPolicy == 'LOG_NOTHING' ) {
-			this.LogSession = null;
-			this.LogStreams = { Stdout: null, Stderr: null };
-			return;
+		else if ( sessionProps instanceof Object ) {
+			props.push( sessionProps );
 		}
 
-		this.LogSession = app.getLog().openSession( props );
-		this.LogSession.setFlushArbiter( this.flushArbiter.bind( this ) );
+		this._logSession = this._app.getLog().openSession( props );
+		this._logSession.setFlushArbiter( this.flushArbiter.bind( this ) );
 
-		// log the server environment
-		LoggedHttpApp = LoggedHttpApp || require( './LoggedHttpApp' );
-		LoggedHttpApp.logServerEnv( this.LogSession );
+		if ( options.LogEnvironment !== false ) {
+			// log the server environment
+			LoggedHttpApp = LoggedHttpApp || require( './LoggedHttpApp' );
+			LoggedHttpApp.logServerEnv( this._logSession );
+		}
 		
-		// log req
-		new IncomingMessageLogger( req, this.LogSession.openRecord( [ 'RECORD_SERVER_REQUEST', 'DATA_TEXT' ] ), true );
+		if ( options.LogHttp !== false ) {
+			// log req
+			new IncomingMessageLogger( this._request, this._logSession.openRecord( [ 'RECORD_SERVER_REQUEST', 'DATA_TEXT' ] ), options.UnchunkHttp );
 
-		// log res
-		new WritableLogger( res.connection, this.LogSession.openRecord( [ 'RECORD_SERVER_RESPONSE', 'DATA_TEXT' ] ), true );
+			// log res
+			new WritableLogger( this._response.connection, this._logSession.openRecord( [ 'RECORD_SERVER_RESPONSE', 'DATA_TEXT' ] ), options.UnchunkHttp );
+		}
 
-		// defer all log streams - open them on the first write
-		// stdout and stderr are hooked in the LoggedHttpApp class and the call is redirected to the current domain
-		this.LogStreams = {
-			Stdout: this.LogSession.openRecord( [ 'STDOUT', 'RECORD_STREAM', 'DATA_TEXT' ] ),
-			Stderr: this.LogSession.openRecord( [ 'STDERR', 'RECORD_STREAM', 'DATA_TEXT' ] ),
-		};	
+		if ( options.LogConsole !== false ) {
 
-
+			// defer all log streams - open them on the first write
+			// stdout and stderr are hooked in the LoggedHttpApp class and the call is redirected to the current domain
+			this._logStreams = {
+				Stdout: this._logSession.openRecord( [ 'STDOUT', 'RECORD_STREAM', 'DATA_TEXT' ] ),
+				Stderr: this._logSession.openRecord( [ 'STDERR', 'RECORD_STREAM', 'DATA_TEXT' ] ),
+			};
+		}
 	}
 
 	flushArbiter ( record ) {
 		return true;
 	}
 
-	determineSessionProps () {
-		return null;
-	}
-
-	determineLogPolicy () {
-		// for debugging this can be 'LOG_NOTHING' to disable all logging
-		return 'LOG_ALL';
-	}
-
 	onError ( err ) {
-		var logSession = this.LogSession;
+		var logSession = this._logSession;
 		if ( logSession ) {
 			logSession.write( err, [ 'RECORD_EXCEPTION', 'DATA_TEXT' ] );
 		}
@@ -78,13 +103,13 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 
 	dispose () {
 
-		if ( this.Domain ) {
+		if ( this._domain ) {
 
-			for ( var steamName in this.LogStreams ) {
-				this.LogStreams[ steamName ].close();
+			for ( var steamName in this._logStreams ) {
+				this._logStreams[ steamName ].close();
 			}
 
-			var logSession = this.LogSession;
+			var logSession = this._logSession;
 			if ( logSession ) {
 				logSession.close();
 			}

@@ -4,17 +4,25 @@ var LoggedHttpAppRequest = require( './LoggedHttpAppRequest' );
 
 class PerennialAppRequest extends LoggedHttpAppRequest {
 	
-	constructor ( app, req, res ) {
-		super( app, req, res );
-	}
+	initLogging ( options ) {
 
-	setLogPolicy ( policy ) {
-		this._logPolicy = policy;
-		return this;
-	}
+		options = Object.isObject( options ) ? options : {};
 
-	determineParentSession () {
-		return this.Request.headers[ 'freedom2-debug-logsession' ];
+		// fill our parent session from the headers, if there is no override
+		var sessionProps = options.SessionProps;
+		var parentSession = this._request.headers[ 'freedom2-debug-logsession' ];
+		if ( sessionProps instanceof Array ) {
+			sessionProps.unshift( { ParentSession: parentSession } );
+		}
+		else if ( sessionProps instanceof Object && !String.isString( sessionProps.ParentSession ) ) {
+			sessionProps.ParentSession = parentSession;
+		}
+		else {
+			options.SessionProps = { ParentSession: parentSession };
+		}
+
+		super.initLogging( options );
+
 	}
 
 	flushArbiter ( record ) {
@@ -22,7 +30,7 @@ class PerennialAppRequest extends LoggedHttpAppRequest {
 	}
 
 	flushDeferredLogs () {
-		this.LogSession.flushDeferredLogs();
+		this._logSession.flushDeferredLogs();
 	}
 
 	onError ( err ) {

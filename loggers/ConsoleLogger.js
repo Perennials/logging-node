@@ -51,7 +51,7 @@ class ConsoleLogger extends Events.EventEmitter {
 			// call .write() or .end() on the log file
 			var domain = process.domain;
 			var fileStream = null;
-			if ( domain && (fileStream = domain.HttpAppRequest.LogStreams[ appRqStreamName ]) ) {
+			if ( domain && (fileStream = domain.HttpAppRequest.getLogStream( appRqStreamName )) ) {
 				fileStream.write( data );
 			}
 			else if ( fileStream = _this._logStreams[ appRqStreamName ] ) {
@@ -83,7 +83,7 @@ class ConsoleLogger extends Events.EventEmitter {
 			// call .write() or .end() on the log file
 			var domain = process.domain;
 			var fileStream = null;
-			if ( domain && (fileStream = domain.HttpAppRequest.LogStreams[ appRqStreamName ]) ) {
+			if ( domain && (fileStream = domain.HttpAppRequest.getLogStream( appRqStreamName )) ) {
 				//bp: node's end will call write, so just close. if all ok close should happen after the write. britle code though
 				fileStream.close();
 			}

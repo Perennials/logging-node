@@ -5,7 +5,7 @@ var Unchunker = require( './Unchunker' );
 class WritableLogger {
 
 	constructor ( src, dest, unchunk ) {
-		if ( 0 && unchunk ) {
+		if ( unchunk ) {
 			dest = new Unchunker( dest );
 		}
 		this._src = src;

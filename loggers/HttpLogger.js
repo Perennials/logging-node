@@ -12,8 +12,9 @@ var _nodeClientRequestOnSocket = Http.ClientRequest.prototype.onSocket;
 var _lastClientRq = null;
 
 // this a bit global functionality
-function HttpLogger ( appLogSession ) {
+function HttpLogger ( appLogSession, unchunk ) {
 	this._appLogSession = appLogSession;
+	this._unchunk = unchunk;
 
 	Http.request = this._newHttpRequest.bind( this );
 	Https.request = this._newHttpsRequest.bind( this );
@@ -30,7 +31,7 @@ HttpLogger.define( {
 		// this will be called before http.request() returns
 		if ( _lastClientRq !== null ) {
 			// the end hook here is taking care to close() the record
-			new WritableLogger( socket, _lastClientRq.LogSession.openRecord( _lastClientRq.LogRecord.RequestProps ), true );
+			new WritableLogger( socket, _lastClientRq.LogSession.openRecord( _lastClientRq.LogRecord.RequestProps ), _lastClientRq.UnchunkHttp );
 			_lastClientRq = null;
 		}
 		return _nodeClientRequestOnSocket.call( this, socket );
@@ -54,6 +55,10 @@ HttpLogger.define( {
 		}
 
 		var LogRecord = options.LogRecord;
+		var unchunk = this._unchunk;
+		if ( options.LogRecord.UnchunkHttp !== undefined ) {
+			unchunk = options.LogRecord.UnchunkHttp;
+		}
 		delete options.LogRecord;
 		var logSession = null;
 
@@ -65,7 +70,7 @@ HttpLogger.define( {
 			logSession = this._appLogSession;
 			var domain = process.domain;
 			if ( (domain = process.domain) ) {
-				logSession = domain.HttpAppRequest.LogSession;
+				logSession = domain.HttpAppRequest.getLogSession();
 			}
 
 			LogRecord.RequestProps = ILogEngine.labelsToProps( LogRecord.RequestProps, {
@@ -73,7 +78,7 @@ HttpLogger.define( {
 				DataType: ILogEngine.DATA_TEXT.Value
 			} );
 			
-			_lastClientRq = { LogRecord: LogRecord, LogSession: logSession };
+			_lastClientRq = { LogRecord: LogRecord, LogSession: logSession, UnchunkHttp: unchunk };
 		}
 
 		var request = originalCall( options, callback );
@@ -90,7 +95,7 @@ HttpLogger.define( {
 			} );
 
 			// the end hook here is taking care to close() the record
-			new IncomingMessageLogger( response, logSession.openRecord( LogRecord.ResponseProps ), true );
+			new IncomingMessageLogger( response, logSession.openRecord( LogRecord.ResponseProps ), unchunk );
 
 		} );
 
