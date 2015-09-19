@@ -30,6 +30,8 @@ HttpLogger.define( {
 		// no way to assign the logsession to the socket via http.request() before any writes happen, so use globals
 		// this will be called before http.request() returns
 		if ( _lastClientRq !== null ) {
+			_lastClientRq.LogSession.emit( 'Http.Request.Start', this, _lastClientRq.LogRecord.RequestProps );
+
 			// the end hook here is taking care to close() the record
 			new WritableLogger( socket, _lastClientRq.LogSession.openRecord( _lastClientRq.LogRecord.RequestProps ), _lastClientRq.UnchunkHttp );
 			_lastClientRq = null;
@@ -78,6 +80,7 @@ HttpLogger.define( {
 				}
 			}
 
+
 			LogRecord.RequestProps = ILogEngine.labelsToProps( LogRecord.RequestProps, {
 				RecordType: ILogEngine.RECORD_HTTP_REQUEST.Value,
 				DataType: ILogEngine.DATA_TEXT.Value
@@ -93,16 +96,42 @@ HttpLogger.define( {
 		}
 
 		request.on( 'response', function ( response ) {
-			
+
+
 			LogRecord.ResponseProps = ILogEngine.labelsToProps( LogRecord.ResponseProps, {
 				RecordType: ILogEngine.RECORD_HTTP_RESPONSE.Value,
 				DataType: ILogEngine.DATA_TEXT.Value
 			} );
+			
+			logSession.emit( 'Http.Response.Start', request, LogRecord.RequestProps, response, LogRecord.ResponseProps );
+			
+			var fonce = true;
+			function once () {
+				if ( fonce ) {
+					fonce = false;
+				}
+				logSession.emit( 'Http.Response.End', request, LogRecord.RequestProps, response, LogRecord.ResponseProps );
+			}
+
+			response.on( 'end', once );
+			response.on( 'close', once );
 
 			// the end hook here is taking care to close() the record
 			new IncomingMessageLogger( response, logSession.openRecord( LogRecord.ResponseProps ), unchunk );
 
 		} );
+
+		var fonce = true;
+		function once () {
+			if ( fonce ) {
+				fonce = false;
+			}
+			logSession.emit( 'Http.Request.End', request, LogRecord.RequestProps );
+		}
+
+		// request.on( 'error', once );
+		request.on( 'finish', once );
+		request.on( 'close', once );
 
 		return request;
 	},

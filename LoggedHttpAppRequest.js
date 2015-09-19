@@ -5,6 +5,9 @@ var IncomingMessageLogger  = require( './loggers/IncomingMessageLogger' );
 var WritableLogger  = require( './loggers/WritableLogger' );
 var ConsoleLogger  = require( './loggers/ConsoleLogger' );
 var LoggedHttpApp = null;
+var Stats = require( 'Stats/Stats' );
+
+var _Id = 0;
 
 class LoggedHttpAppRequest extends HttpAppRequest {
 
@@ -20,11 +23,28 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 		this._logStreams = { Stdout: null, Stderr: null };
 
 		this._initOptions = null;
+		
+		this._stats = new Stats();
+		this._stats.startTimer( this, 'Timing.Total' );
 
 		if ( Object.isObject( loggingOptions ) ) {
 			this.initLogging( loggingOptions );
 		}
 
+	}
+
+	_onHttpRequestStart ( request, props ) {
+		this._stats.startTimer( request );
+	}
+
+	_onHttpRequestEnd ( request, props ) {
+		var name = props.Name || (++_Id).toString();
+		var t = this._stats.saveTimer( request, 'Request.' + name + '.Timing' );
+		this._stats.addStat( 'Timing.Requests', t, 'ms' );
+	}
+
+	getStats () {
+		return this._stats;
 	}
 
 	getInitOptions () {
@@ -71,6 +91,9 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 		this._logSession = this._app.getLog().openSession( props );
 		this._logSession.setFlushArbiter( this.flushArbiter.bind( this ) );
 
+		this._logSession.on( 'Http.Request.Start', this._onHttpRequestStart.bind( this ) );
+		this._logSession.on( 'Http.Request.End', this._onHttpRequestEnd.bind( this ) );
+
 		if ( options.LogEnvironment !== false ) {
 			// log the server environment
 			LoggedHttpApp = LoggedHttpApp || require( './LoggedHttpApp' );
@@ -110,6 +133,9 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 
 	dispose () {
 
+		this._stats.saveTimer( this, 'Timing.Total' );
+		this._stats.setStat( 'Memory.Usage', process.memoryUsage().rss / (1024*1024), 'MB' );
+
 		if ( this._domain ) {
 
 			for ( var steamName in this._logStreams ) {
@@ -121,6 +147,9 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 
 			var logSession = this._logSession;
 			if ( logSession ) {
+				if ( this._initOptions.LogEnvironment !== false ) {
+					logSession.write( this._stats.getStats(), [ 'RECORD_DEBUG', 'DATA_JSON' ] );
+				}
 				logSession.close();
 			}
 
