@@ -1143,12 +1143,15 @@ TODO
 - Keep memory stats somehow?
 - Keep timings of the requests.  
 &nbsp;  
-- Right now LoggedHttpApp.close() closes the server and if there are unflushed
+- The `Unchunker` should be over FileRecord, not over `DeferredRecord`. This way
+  unchunking will take place only when flushing. This will improve performance
+  in the case of `LOG_ALL_ON_ERROR`.
+- Right now `LoggedHttpApp.close()` closes the server and if there are unflushed
   deferred records and they are not of process of being flushed (i.e. there
   are no io operations in node's queue), node will exit and the logging will
   be lost. This is inconsistent because if there is opened record the app will
   not close until the record is closed.
-- Would be cool to have BlackHole logging classes.  
+- Would be cool to have `BlackHole` logging classes.  
 &nbsp;  
 - Split docs into different files? This one is too long.
 
