@@ -12,8 +12,8 @@ var _nodeClientRequestOnSocket = Http.ClientRequest.prototype.onSocket;
 var _lastClientRq = null;
 
 // this a bit global functionality
-function HttpLogger ( appLogSession, unchunk ) {
-	this._appLogSession = appLogSession;
+function HttpLogger ( app, unchunk ) {
+	this._app = app;
 	this._unchunk = unchunk;
 
 	Http.request = this._newHttpRequest.bind( this );
@@ -55,11 +55,8 @@ HttpLogger.define( {
 		}
 
 		var LogRecord = options.LogRecord;
-		var unchunk = this._unchunk;
-		if ( options.LogRecord.UnchunkHttp !== undefined ) {
-			unchunk = options.LogRecord.UnchunkHttp;
-		}
 		delete options.LogRecord;
+		var unchunk = null;
 		var logSession = null;
 
 		if ( LogRecord !== false ) {
@@ -67,10 +64,18 @@ HttpLogger.define( {
 			if ( !(LogRecord instanceof Object) ) {
 				LogRecord = {};
 			}
-			logSession = this._appLogSession;
+			unchunk = LogRecord.UnchunkHttp;
+			logSession = this._app.getLogSession();
+			if ( unchunk === undefined ) {
+				unchunk = this._app.getInitOptions().UnchunkHttp;
+			}
+			
 			var domain = process.domain;
 			if ( (domain = process.domain) ) {
 				logSession = domain.HttpAppRequest.getLogSession();
+				if ( unchunk === undefined ) {
+					unchunk = domain.HttpAppRequest.getInitOptions().UnchunkHttp;
+				}
 			}
 
 			LogRecord.RequestProps = ILogEngine.labelsToProps( LogRecord.RequestProps, {

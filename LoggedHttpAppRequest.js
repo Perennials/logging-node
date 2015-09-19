@@ -16,14 +16,19 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 
 		this._logPolicy = 'LOG_ALL';
 
-		// this is public because LoggedHttpApp needs it
 		this._logSession = null;
 		this._logStreams = { Stdout: null, Stderr: null };
+
+		this._initOptions = null;
 
 		if ( Object.isObject( loggingOptions ) ) {
 			this.initLogging( loggingOptions );
 		}
 
+	}
+
+	getInitOptions () {
+		return this._initOptions;
 	}
 
 	setLogPolicy ( policy ) {
@@ -45,6 +50,8 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 
 	initLogging ( options ) {
 		options = Object.isObject( options ) ? options : {};
+
+		this._initOptions = options;
 
 		if ( String.isString( options.LogPolicy ) ) {
 			this.setLogPolicy( options.LogPolicy );
@@ -106,7 +113,10 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 		if ( this._domain ) {
 
 			for ( var steamName in this._logStreams ) {
-				this._logStreams[ steamName ].close();
+				var logStream = this._logStreams[ steamName ];
+				if ( logStream ) {
+					logStream.close();
+				}
 			}
 
 			var logSession = this._logSession;

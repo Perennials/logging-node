@@ -6,19 +6,22 @@ class PerennialAppRequest extends LoggedHttpAppRequest {
 	
 	initLogging ( options ) {
 
-		options = Object.isObject( options ) ? options : {};
 
 		// fill our parent session from the headers, if there is no override
-		var sessionProps = options.SessionProps;
 		var parentSession = this._request.headers[ 'freedom2-debug-logsession' ];
-		if ( sessionProps instanceof Array ) {
-			sessionProps.unshift( { ParentSession: parentSession } );
-		}
-		else if ( sessionProps instanceof Object && !String.isString( sessionProps.ParentSession ) ) {
-			sessionProps.ParentSession = parentSession;
-		}
-		else {
-			options.SessionProps = { ParentSession: parentSession };
+		if ( parentSession !== undefined ) {
+			
+			options = Object.isObject( options ) ? options : {};
+			var sessionProps = options.SessionProps;
+			if ( sessionProps instanceof Array ) {
+				sessionProps.unshift( { ParentSession: parentSession } );
+			}
+			else if ( sessionProps instanceof Object && !String.isString( sessionProps.ParentSession ) ) {
+				sessionProps.ParentSession = parentSession;
+			}
+			else {
+				options.SessionProps = { ParentSession: parentSession };
+			}
 		}
 
 		super.initLogging( options );

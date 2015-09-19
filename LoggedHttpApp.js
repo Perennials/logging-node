@@ -25,6 +25,7 @@ class LoggedHttpApp extends HttpApp {
 		this._logEnv = null;
 		this._consoleLogger = null;
 		this._httpLogger = null;
+		this._initOptions = null;
 
 		if ( Object.isObject( loggingOptions ) ) {
 			this.initLogging( loggingOptions );
@@ -41,9 +42,15 @@ class LoggedHttpApp extends HttpApp {
 		return this._logPolicy;
 	}
 
+	getInitOptions () {
+		return this._initOptions;
+	}
+
 	initLogging ( options ) {
 
 		options = Object.isObject( options ) ? options : {};
+
+		this._initOptions = options;
 
 		if ( String.isString( options.LogPolicy ) ) {
 			this.setLogPolicy( options.LogPolicy );
@@ -82,7 +89,7 @@ class LoggedHttpApp extends HttpApp {
 
 		if ( options.LogHttp !== false ) {
 			// hijack the http module
-			this._httpLogger = new HttpLogger( this._logSession, options.UnchunkHttp );
+			this._httpLogger = new HttpLogger( this, options.UnchunkHttp );
 		}
 
 
@@ -158,7 +165,13 @@ class LoggedHttpApp extends HttpApp {
 			// so make sure we try to finalize and close everything after the .end() call
 			for ( var i = requests.length - 1; i >= 0; --i ) {
 				var request = requests[ i ];
-				request.getLogSession().once( 'Session.Closed', endLogger );
+				var logSession = request.getLogSession();
+				if ( logSession ) {
+					logSession.once( 'Session.Closed', endLogger );
+				}
+				else {
+					endLogger();
+				}
 				request.dispose();
 			}
 

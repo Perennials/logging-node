@@ -27,6 +27,8 @@ class DeferredSession extends ILogSession {
 
 		super( log, parentId, props, callback );
 
+		this.setMaxListeners( 0 );
+
 		this._session = null;
 		this._ctor = constructor;
 		this._ctorLog = log;

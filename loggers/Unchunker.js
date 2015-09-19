@@ -157,7 +157,7 @@ class Unchunker {
 		else if ( encoding == 'deflate' ) {
 			this._zlib = Zlib.createInflate();
 		}
-		if ( encoding !== undefined ) {
+		if ( encoding !== undefined && encoding != 'identity' ) {
 			newheaders[ 'x-logging-node-original-content-encoding' ] = encoding;
 			newheaders[ 'content-encoding' ] = 'identity';
 		}
