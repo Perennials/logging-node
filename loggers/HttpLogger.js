@@ -105,11 +105,12 @@ HttpLogger.define( {
 			
 			logSession.emit( 'Http.Response.Start', request, LogRecord.RequestProps, response, LogRecord.ResponseProps );
 			
-			var fonce = true;
-			function once () {
+			let fonce = false;
+			let once = function () {
 				if ( fonce ) {
-					fonce = false;
+					return;
 				}
+				fonce = true;
 				logSession.emit( 'Http.Response.End', request, LogRecord.RequestProps, response, LogRecord.ResponseProps );
 			}
 
@@ -121,15 +122,18 @@ HttpLogger.define( {
 
 		} );
 
-		var fonce = true;
-		function once () {
+		let fonce = false;
+		let once = function () {
 			if ( fonce ) {
-				fonce = false;
+				return;
 			}
+			fonce = true;
 			logSession.emit( 'Http.Request.End', request, LogRecord.RequestProps );
 		}
 
-		// request.on( 'error', once );
+		request.on( 'error', function ( err ) {
+			logSession.emit( 'Http.Request.Error', request, LogRecord.RequestProps, err );
+		} );
 		request.on( 'finish', once );
 		request.on( 'close', once );
 

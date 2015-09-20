@@ -26,6 +26,13 @@ class PerennialAppRequest extends LoggedHttpAppRequest {
 
 		super.initLogging( options );
 
+		var _this = this;
+		this._logSession.on( 'Deferred.Flush', function ( err, session ) {
+			if ( session.getId() !== null ) {
+				_this.getResponse().setHeader( 'freedom2-debug-logsession', session.getId() );
+			}
+		} );
+
 	}
 
 	flushArbiter ( record ) {

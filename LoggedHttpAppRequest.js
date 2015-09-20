@@ -8,6 +8,16 @@ var LoggedHttpApp = null;
 var Stats = require( 'Stats/Stats' );
 
 var _Id = 0;
+var _Reqs = new WeakMap();
+
+function GetRqId ( rq ) {
+	if ( !_Reqs.has( rq ) ) {
+		var id = ++_Id;
+		_Reqs.set( rq, id );
+		return id;
+	}
+	return _Reqs.get( rq );
+}
 
 class LoggedHttpAppRequest extends HttpAppRequest {
 
@@ -33,14 +43,37 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 
 	}
 
-	_onHttpRequestStart ( request, props ) {
-		this._stats.startTimer( request );
+	_onHttpRequestStart ( rq, rqprops ) {
+		this._stats.startTimer( rq );
+		this._stats.addStat( 'Requests.Started', 1 );
 	}
 
-	_onHttpRequestEnd ( request, props ) {
-		var name = props.Name || (++_Id).toString();
-		var t = this._stats.saveTimer( request, 'Request.' + name + '.Timing' );
+	_onHttpRequestError ( rq, rqprops, err ) {
+		this._onHttpRequestEnd( rq, rqprops );
+		this._onHttpResponseStart( rq, rqprops, err );
+	}
+
+	_onHttpRequestEnd ( rq, rqprops ) {
+		var name = rqprops.Name || GetRqId( rq ).toString();
+		var t = this._stats.saveTimer( rq, 'Request.' + name + '.Timing' );
 		this._stats.addStat( 'Timing.Requests', t, 'ms' );
+		this._stats.addStat( 'Requests.Finished', 1 );
+	}
+
+	_onHttpResponseStart ( rq, rqprops, rs, rsprops ) {
+		var name = 'Request.' + ( rqprops.Name || GetRqId( rq ).toString() ) + '.Success';
+		var good = this.isResponseOk( rs );
+		if ( good ) {
+			this._stats.addStat( 'Requests.Success', 1 );
+		}
+		else {
+			this._stats.addStat( 'Requests.Failed', 1 );
+		}
+		this._stats.setStat( name, good );
+	}
+
+	isResponseOk ( rs ) {
+		return !(rs instanceof Error) && rs.statusCode >= 200 && rs.statusCode < 400;
 	}
 
 	getStats () {
@@ -93,6 +126,8 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 
 		this._logSession.on( 'Http.Request.Start', this._onHttpRequestStart.bind( this ) );
 		this._logSession.on( 'Http.Request.End', this._onHttpRequestEnd.bind( this ) );
+		this._logSession.on( 'Http.Request.Error', this._onHttpRequestError.bind( this ) );
+		this._logSession.on( 'Http.Response.Start', this._onHttpResponseStart.bind( this ) );
 
 		if ( options.LogEnvironment !== false ) {
 			// log the server environment
@@ -123,6 +158,12 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 		return true;
 	}
 
+	finalizeStats () {
+		this._stats.saveTimer( this, 'Timing.Total' );
+		this._stats.setStat( 'Memory.Usage', process.memoryUsage().rss, 'b' );
+		return this._stats;
+	}
+
 	onError ( err ) {
 		var logSession = this._logSession;
 		if ( logSession ) {
@@ -133,10 +174,9 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 
 	dispose () {
 
-		this._stats.saveTimer( this, 'Timing.Total' );
-		this._stats.setStat( 'Memory.Usage', process.memoryUsage().rss / (1024*1024), 'MB' );
-
 		if ( this._domain ) {
+			
+			this.finalizeStats();
 
 			for ( var steamName in this._logStreams ) {
 				var logStream = this._logStreams[ steamName ];
