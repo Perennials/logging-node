@@ -61,10 +61,10 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 	}
 
 	_onHttpResponseStart ( rq, rqprops, rs, rsprops ) {
-		var name = 'Request.' + ( rqprops.Name || GetRqId( rq ).toString() ) + '.Success';
+		var name = 'Request.' + ( rqprops.Name || GetRqId( rq ).toString() ) + '.Succeeded';
 		var good = this.isResponseOk( rs );
 		if ( good ) {
-			this._stats.addStat( 'Requests.Success', 1 );
+			this._stats.addStat( 'Requests.Succeeded', 1 );
 		}
 		else {
 			this._stats.addStat( 'Requests.Failed', 1 );
