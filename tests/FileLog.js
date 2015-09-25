@@ -61,7 +61,7 @@ UnitestA( 'FileLog.openSession()', function ( test ) {
 			                         	.replace( '{SessionIndex}', session.getIndex() )
 			                         	.replace( '{SessionName}', 'Sesiq' )
 			) );
-			test.eq( session.getLoggedRecords()[ 0 ], '1-META.json' );
+			test.eq( session.getLoggedRecords()[ 0 ], '1-META-.json' );
 			var fn = session.getStorageUri() + '/' + session.getLoggedRecords()[ 0 ];
 			test( Fs.existsSync( fn ) );
 			
@@ -110,7 +110,7 @@ UnitestA( 'FileLog.openSession() 2', function ( test ) {
 			                         	.replace( '{SessionIndex}', session.getIndex() )
 			                         	.replace( '{SessionName}', 'Sesiq' )
 			) );
-			test.eq( session.getLoggedRecords()[ 0 ], '1-META.json' );
+			test.eq( session.getLoggedRecords()[ 0 ], '1-META-.json' );
 			var fn = session.getStorageUri() + '/' + session.getLoggedRecords()[ 0 ];
 			test( Fs.existsSync( fn ) );
 			
@@ -149,7 +149,7 @@ UnitestA( 'FileSession.addLinkedToken()', function ( test ) {
 
 			test( !err );
 
-			test.eq( session.getLoggedRecords()[ 0 ], '1-META.json' );
+			test.eq( session.getLoggedRecords()[ 0 ], '1-META-.json' );
 			var fn = session.getStorageUri() + '/' + session.getLoggedRecords()[ 0 ];
 			test( Fs.existsSync( fn ) );
 
@@ -198,7 +198,7 @@ UnitestA( 'FileSession.wait()', function ( test ) {
 			// write one record and check its contents
 			session.write( 'asd qwe', [ 'DATA_TEXT' ], function ( err ) {
 				test( !err );
-				test( session.getLoggedRecords()[ 1 ] == '2-GENERIC.txt' );
+				test( session.getLoggedRecords()[ 1 ] == '2-GENERIC-.txt' );
 				var fn = session.getStorageUri() + '/' + session.getLoggedRecords()[ 1 ];
 				test( Fs.readFileSync( fn, { encoding: 'utf8' } ) == 'asd qwe' );
 			} );

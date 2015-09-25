@@ -152,9 +152,9 @@ class FileSession extends ILogSession {
 	}
 
 	_makeRecordId ( props ) {
-		var recordName = '';
+		var recordName = '-';
 		if ( String.isString( props.Name ) ) {
-			recordName = '-' + props.Name;
+			recordName += props.Name;
 		}
 		if ( !String.isString( props.RecordType ) ) {
 			props.RecordType = ILogEngine.RECORD_GENERIC.Value;
