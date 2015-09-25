@@ -120,8 +120,8 @@ UnitestA( 'LoggedHttpAppRequest logging', function ( test ) {
 				_this._app.close( function () {
 
 					_this.getLogSession().close( function () {
-						// if we have 8 files - two std streams, an exception, a meta, a close, a server env, server rq and rs
-						test( _this.getLogSession().getLoggedRecords().length === 8 );
+						// if we have 8 files - two std streams, an exception, a meta, a close, a server env, server rq and rs, a debug
+						test( _this.getLogSession().getLoggedRecords().length === 9 );
 
 						//if the console calls went properly in the session
 						test.eq( 'asd\n', Fs.readFileSync( _this.getLogSession().getStorageUri() + '/' + _this.getLogSession().getLoggedRecords()[ 3 ], { encoding: 'utf8' } ) );

@@ -59,7 +59,7 @@ UnitestA( 'FileLog.openSession()', function ( test ) {
 			                         + Path.sep
 			                         + FileSession.DirectoryFormat
 			                         	.replace( '{SessionIndex}', session.getIndex() )
-			                         	.replace( '{SessionName}', '-Sesiq' )
+			                         	.replace( '{SessionName}', 'Sesiq' )
 			) );
 			test.eq( session.getLoggedRecords()[ 0 ], '1-META.json' );
 			var fn = session.getStorageUri() + '/' + session.getLoggedRecords()[ 0 ];
@@ -108,7 +108,7 @@ UnitestA( 'FileLog.openSession() 2', function ( test ) {
 			                         + Path.sep + 'myapp'
 			                         + FileSession.DirectoryFormat
 			                         	.replace( '{SessionIndex}', session.getIndex() )
-			                         	.replace( '{SessionName}', '-Sesiq' )
+			                         	.replace( '{SessionName}', 'Sesiq' )
 			) );
 			test.eq( session.getLoggedRecords()[ 0 ], '1-META.json' );
 			var fn = session.getStorageUri() + '/' + session.getLoggedRecords()[ 0 ];

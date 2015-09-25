@@ -47,7 +47,7 @@ class FileSession extends ILogSession {
 		props.merge( ILogEngine.labelsToProps( [ 'RECORD_META', 'DATA_JSON' ] ) );
 		
 		if ( props.Name !== undefined ) {
-			sessionName = '-' + props.Name;
+			sessionName = props.Name;
 			delete props.Name;
 		}
 		
@@ -327,7 +327,7 @@ FileSession.implement( ILogSession );
 
 FileSession.static( {
 
-	DirectoryFormat: '{SessionIndex}{SessionName}'
+	DirectoryFormat: '{SessionIndex}-{SessionName}'
 
 } );
 
