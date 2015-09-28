@@ -1,6 +1,8 @@
 #!/bin/bash
 if [[ $1 == 'debug' ]]; then
-	node-debug ./tests/tests.js nocolor
+	CMD=node-debug
 else
-	node ./tests/tests.js nocolor
+	CMD=node
 fi
+
+env cfg.from.env=cfg_env $CMD ./tests/tests.js nocolor -cfg.from.cli=cfg_cli

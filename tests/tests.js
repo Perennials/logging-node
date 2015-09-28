@@ -9,3 +9,4 @@ if ( process.argv[2] == 'nocolor' ) {
 require( './ILogEngine.js' );
 require( './FileLog.js' );
 require( './LoggedHttpApp.js' );
+require( './PerennialApp.js' );

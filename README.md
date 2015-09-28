@@ -16,6 +16,8 @@ The implementation is in `BETA` stage.
 	- [PerennialApp](#perennialapp)
 		- [Methods](#methods)
 			- [Constructor](#constructor)
+			- [.loadConfig()](#loadconfig)
+			- [.getConfig()](#getconfig)
 			- [.initLogging()](#initlogging)
 			- [.getLog()](#getlog)
 			- [.getLogSession()](#getlogsession)
@@ -313,6 +315,8 @@ var PerennialApp = require( 'Logging/PerennialApp' );
 #### Methods
 
 - [Constructor](#constructor)
+- [.loadConfig()](#loadconfig)
+- [.getConfig()](#getconfig)
 - [.initLogging()](#initlogging)
 - [.getLog()](#getlog)
 - [.getLogSession()](#getlogsession)
@@ -337,12 +341,9 @@ outside the context of an HTTP request (i.e.
 [PerennialAppRequest](#perennialapprequest)) will be saved in this session.
 The session directory will only be created if any data is actually logged.
 
-**Remarks:** Upon constructing an instance all console output and HTTP
-requests will be hooked. The side effect of this is that two instances of this
-class can not be constructed at the same time. Constructing a second instance
-of this class requires `.close()`ing the first instance in order to work
-properly.
-
+The constructor will take care to load environment variables and program
+arguments according to a common convention. Variables and arguments starting
+with `cfg.` or `-cfg.` will be adopted as config entries.
 
 ```js
 new PerennialApp (
@@ -353,8 +354,35 @@ new PerennialApp (
 );
 ```
 
+##### .loadConfig()
+Loads the application configs from the specified directory according to a
+common convention. The following config names will be loaded, if they exist,
+in the same order and stacked onto each other: `config.js`, `config.local.js`,
+`config/local.js`. They will be loaded with `require()` so they should do
+`module.exports` to export the desired config properties.
+
+```js
+.loadConfig(
+	dir:String
+) : Config;
+```
+
+##### .getConfig()
+Retrieves the config associated with the application.
+
+```js
+.getConfig() : Config;
+```
+
 ##### .initLogging()
 Initializes the logging.
+
+**Remarks:** Upon calling this function all console output and HTTP requests
+will be hooked. The side effect of this is that two instances of this class
+can not be constructed at the same time, if they both want to do logging.
+Constructing a second instance of this class requires `.close()`ing the first
+instance in order to work properly.
+
 
 ```js
 .initLogging(
@@ -1140,9 +1168,6 @@ var DeferredRecord = require( 'Logging/DeferredRecord' );
 TODO
 ----
 
-- Keep memory stats somehow?
-- Keep timings of the requests.  
-&nbsp;  
 - For some reason `LOG_ALL_ON_ERROR` is much slower than `LOG_ALL`. Need to profile.
 - Right now LoggedHttpApp.close() closes the server and if there are unflushed
   deferred records and they are not of process of being flushed (i.e. there
