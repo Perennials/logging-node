@@ -397,10 +397,10 @@ The options object accepts the following form, where no option is mandatory:
 	StorageDir: String,
 	SessionProps: Object|Array,
 	LogPolicy: String,
-	LogEnvironment: bool,
-	LogConsole: bool,
-	LogHttp: bool,
-	UnchunkHttp: bool,
+	LogEnvironment: Boolean,
+	LogConsole: Boolean,
+	LogHttp: Boolean,
+	UnchunkHttp: Boolean
 }
 ```
 
