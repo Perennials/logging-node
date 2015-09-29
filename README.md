@@ -215,7 +215,7 @@ class MyAppRequest extends PerennialAppRequest {
 // this is used for logging outside of a request context
 class MyApp extends PerennialApp {
 
-	constructor ( appRequest, host, port ) {
+	constructor ( appRequest ) {
 		var logOptions = {
 			LogPolicy: 'LOG_ALL_ON_ERROR',
 			SessionProps: {
@@ -225,18 +225,18 @@ class MyApp extends PerennialApp {
 			// log sessions will be written in this directory, or the temp directory
 			StorageDir: __dirname
 		};
-		super( appRequest, host, port, logOptions );
+		super( appRequest, logOptions );
 	}
 }
 
 
 // construct a new HttpApp, tell it our request class is MyAppRequest
-var app = new MyApp( MyAppRequest, '0.0.0.0', 1337 );
+var app = new MyApp( MyAppRequest, );
 
 // log something in the app log session
 console.log( 'Starting to listen on 0.0.0.0:1337' );
 console.error( 'Ops.' );
-app.startListening();
+app.startListening( 1337, '0.0.0.0' );
 ```
 
 
@@ -348,8 +348,6 @@ with `cfg.` or `-cfg.` will be adopted as config entries.
 ```js
 new PerennialApp (
 	appRequest:HttpAppRequest,
-	host:String,
-	port:Number,
 	logOptions:Object|undefined
 );
 ```

@@ -15,9 +15,9 @@ var HttpLogger = require( './loggers/HttpLogger' );
 
 class LoggedHttpApp extends HttpApp {
 
-	constructor ( appRequest, host, port, loggingOptions ) {
+	constructor ( appRequest, loggingOptions ) {
 		
-		super( appRequest || LoggedHttpAppRequest, host, port )
+		super( appRequest || LoggedHttpAppRequest );
 		
 		this._logPolicy = 'LOG_ALL';
 		this._log = null;

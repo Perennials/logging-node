@@ -1,20 +1,15 @@
 "use strict";
 
 var LoggedHttpApp = require( './LoggedHttpApp' );
+var PerennialAppRequest = require( './PerennialAppRequest' );
 var Config = require( 'App/Config' );
 var Fs = require( 'fs' );
 
 class PerennialApp extends LoggedHttpApp {
 	
-	constructor ( appRequest, host, port, options ) {
+	constructor ( appRequest, options ) {
 		
-		if ( arguments.length == 2 ) {
-			port = host;
-			host = appRequest;
-			appRequest = PerennialAppRequest;
-		}
-		
-		super( appRequest, host, port, options );
+		super( appRequest || PerennialAppRequest, options );
 
 
 		var cfg = (this._config = new Config());
