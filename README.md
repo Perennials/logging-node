@@ -407,7 +407,7 @@ The options object accepts the following form, where no option is mandatory:
 Property | Description
 :------- | :----------
 `StorageDir` | Where log sessions will be created. If not provided the system temp dir will be used.
-`SessionProps` | Properties for creating the log session.
+`SessionProps` | Properties for creating the log session. See [.openSession()](#opensession).
 `LogPolicy` | `'LOG_ALL'`, `'LOG_NOTHING'`, `'LOG_ALL_ON_ERROR'`. The default is `'LOG_ALL'`. `'LOG_ALL_ON_ERROR'` will buffer the logs and flush them only if some error happens, otherwise they will be discarded when the log session is closed. Buffering the records may increase the memory usage of the application, but will probably result in better performance than `'LOG_ALL'`.
 `LogEnvironment` | If this is `false` the process environment will not be logged. Defaults to `true`.
 `LogConsole` | If this is `false` the `console.log()` and `console.error()` calls will not be intercepted and logged. Defaults to `true`.
