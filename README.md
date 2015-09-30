@@ -1166,6 +1166,9 @@ var DeferredRecord = require( 'Logging/DeferredRecord' );
 TODO
 ----
 
+- If logged HTTP rq/rs don't have a name, they should be assigned an numeric name,
+  so they are associated with each other - since the order of receiving the responses
+  is not bound to the order of sending the requests.
 - For some reason `LOG_ALL_ON_ERROR` is much slower than `LOG_ALL`. Need to profile.
 - Right now LoggedHttpApp.close() closes the server and if there are unflushed
   deferred records and they are not of process of being flushed (i.e. there
