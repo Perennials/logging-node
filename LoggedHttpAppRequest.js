@@ -102,6 +102,11 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 	}
 
 	initLogging ( options ) {
+		var log = this._app.getLog();
+		if ( !log ) {
+			return false;
+		}
+		
 		options = Object.isObject( options ) ? options : {};
 
 		this._initOptions = options;
@@ -121,7 +126,7 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 			props.push( sessionProps );
 		}
 
-		this._logSession = this._app.getLog().openSession( props );
+		this._logSession = log.openSession( props );
 		this._logSession.setFlushArbiter( this.flushArbiter.bind( this ) );
 
 		this._logSession.on( 'Http.Request.Start', this._onHttpRequestStart.bind( this ) );
