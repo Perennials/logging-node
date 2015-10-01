@@ -62,7 +62,7 @@ class PerennialApp extends LoggedHttpApp {
 	initLogging ( options ) {
 
 		var config = this.getConfig();
-		var dirFormat = config.render( '{app.name}{app.version_flat}-{app.instance}-' + FileSession.DirectoryFormat );
+		var dirFormat = config.render( '{app.name}{app.version_flat}-{app.instance}-' ) + FileSession.DirectoryFormat;
 
 		options = Object.isObject( options ) ? options : {};
 		var sessionProps = options.SessionProps;
