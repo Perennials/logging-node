@@ -8,7 +8,7 @@ class PerennialAppRequest extends LoggedHttpAppRequest {
 	initLogging ( options ) {
 
 		var config = this.getApp().getConfig();
-		var dirFormat = config.render( '{app.name}{app.version.flat}-{app.instance}-' + FileSession.DirectoryFormat );;
+		var dirFormat = config.render( '{app.name}{app.version_flat}-{app.instance}-' + FileSession.DirectoryFormat );
 
 		options = Object.isObject( options ) ? options : {};
 		var sessionProps = options.SessionProps;
