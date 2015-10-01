@@ -1,23 +1,41 @@
 "use strict";
 
 var LoggedHttpAppRequest = require( './LoggedHttpAppRequest' );
+var FileSession = require( './FileSession' );
 
 class PerennialAppRequest extends LoggedHttpAppRequest {
 	
 	initLogging ( options ) {
 
+		var config = this.getApp().getConfig();
+		var dirFormat = config.render( '{app.name}{app.version.flat}-{app.instance}-' + FileSession.DirectoryFormat );;
+
+		options = Object.isObject( options ) ? options : {};
+		var sessionProps = options.SessionProps;
+		if ( sessionProps instanceof Array ) {
+			sessionProps.unshift( { DirectoryFormat: dirFormat } );
+		}
+		else if ( sessionProps instanceof Object ) {
+			if ( !String.isString( sessionProps.DirectoryFormat ) ) {
+				sessionProps.DirectoryFormat = dirFormat;
+			}
+		}
+		else {
+			options.SessionProps = { DirectoryFormat: dirFormat };
+		}
 
 		// fill our parent session from the headers, if there is no override
 		var parentSession = this._request.headers[ 'freedom2-debug-logsession' ];
 		if ( parentSession !== undefined ) {
 			
-			options = Object.isObject( options ) ? options : {};
 			var sessionProps = options.SessionProps;
 			if ( sessionProps instanceof Array ) {
 				sessionProps.unshift( { ParentSession: parentSession } );
 			}
-			else if ( sessionProps instanceof Object && !String.isString( sessionProps.ParentSession ) ) {
-				sessionProps.ParentSession = parentSession;
+			else if ( sessionProps instanceof Object ) {
+				if ( !String.isString( sessionProps.ParentSession ) ) {
+					sessionProps.ParentSession = parentSession;
+				}
 			}
 			else {
 				options.SessionProps = { ParentSession: parentSession };

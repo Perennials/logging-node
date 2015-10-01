@@ -4,6 +4,7 @@ var LoggedHttpApp = require( './LoggedHttpApp' );
 var PerennialAppRequest = require( './PerennialAppRequest' );
 var Config = require( 'App/Config' );
 var Fs = require( 'fs' );
+var FileSession = require( './FileSession' );
 
 class PerennialApp extends LoggedHttpApp {
 	
@@ -59,6 +60,24 @@ class PerennialApp extends LoggedHttpApp {
 	}
 
 	initLogging ( options ) {
+
+		var config = this.getConfig();
+		var dirFormat = config.render( '{app.name}{app.version.flat}-{app.instance}-' + FileSession.DirectoryFormat );;
+
+		options = Object.isObject( options ) ? options : {};
+		var sessionProps = options.SessionProps;
+		if ( sessionProps instanceof Array ) {
+			sessionProps.unshift( { DirectoryFormat: dirFormat } );
+		}
+		else if ( sessionProps instanceof Object ) {
+			if ( !String.isString( sessionProps.DirectoryFormat ) ) {
+				sessionProps.DirectoryFormat = dirFormat;
+			}
+		}
+		else {
+			options.SessionProps = { DirectoryFormat: dirFormat };
+		}
+
 		super.initLogging( options );
 		if ( this._consoleLogger ) {
 			this._consoleLogger.on( 'Stderr.Open', this._onStderrOpen.bind( this ) );
