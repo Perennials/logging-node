@@ -114,6 +114,9 @@ HttpLogger.define( {
 				logSession.emit( 'Http.Response.End', request, LogRecord.RequestProps, response, LogRecord.ResponseProps );
 			}
 
+			request.on( 'error', function ( err ) {
+				logSession.emit( 'Http.Response.Error', request, LogRecord.RequestProps, response, LogRecord.ResponseProps, err );
+			} );
 			response.on( 'end', once );
 			response.on( 'close', once );
 

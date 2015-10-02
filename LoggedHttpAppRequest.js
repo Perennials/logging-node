@@ -49,20 +49,22 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 	}
 
 	_onHttpRequestError ( rq, rqprops, err ) {
-		this._onHttpRequestEnd( rq, rqprops );
-		this._onHttpResponseStart( rq, rqprops, err );
+		this._onHttpResponseEnd( rq, rqprops, null, null, err );
 	}
 
-	_onHttpRequestEnd ( rq, rqprops ) {
+	_onHttpResponseError ( rq, rqprops, rs, rsprops, err ) {
+		this._onHttpResponseEnd( rq, rqprops, rs, rsprops, err );
+	}
+
+	_onHttpResponseEnd ( rq, rqprops, rs, rsprops, err ) {
+
 		var name = rqprops.Name || GetRqId( rq ).toString();
 		var t = this._stats.saveTimer( rq, 'Request.' + name + '.Timing' );
 		this._stats.addStat( 'Timing.Requests', t, 'ms' );
 		this._stats.addStat( 'Requests.Finished', 1 );
-	}
 
-	_onHttpResponseStart ( rq, rqprops, rs, rsprops ) {
 		var name = 'Request.' + ( rqprops.Name || GetRqId( rq ).toString() ) + '.Succeeded';
-		var good = this.isResponseOk( rs );
+		var good = this.isResponseOk( rs, err );
 		if ( good ) {
 			this._stats.addStat( 'Requests.Succeeded', 1 );
 		}
@@ -72,8 +74,8 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 		this._stats.setStat( name, good );
 	}
 
-	isResponseOk ( rs ) {
-		return !(rs instanceof Error) && rs.statusCode >= 200 && rs.statusCode < 400;
+	isResponseOk ( rs, err ) {
+		return !(err instanceof Error) && rs.statusCode >= 200 && rs.statusCode < 400;
 	}
 
 	getStats () {
@@ -130,9 +132,9 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 		this._logSession.setFlushArbiter( this.flushArbiter.bind( this ) );
 
 		this._logSession.on( 'Http.Request.Start', this._onHttpRequestStart.bind( this ) );
-		this._logSession.on( 'Http.Request.End', this._onHttpRequestEnd.bind( this ) );
 		this._logSession.on( 'Http.Request.Error', this._onHttpRequestError.bind( this ) );
-		this._logSession.on( 'Http.Response.Start', this._onHttpResponseStart.bind( this ) );
+		this._logSession.on( 'Http.Response.End', this._onHttpResponseEnd.bind( this ) );
+		this._logSession.on( 'Http.Response.Error', this._onHttpResponseError.bind( this ) );
 
 		if ( options.LogEnvironment !== false ) {
 			// log the server environment
