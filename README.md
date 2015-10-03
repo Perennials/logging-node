@@ -322,10 +322,9 @@ var LoggedHttpApp = require( 'Logging/LoggedHttpApp' );
 
 ##### Constructor
 The `appRequest` parameter is a constructor for a class derived
-`LoggedHttpAppRequest`. The `host` and `port` parameters are used when creating an
-HTTP server and are passed directly to `http.Server.listen()`. The `logOptions`,
-if provided, is passed to [.initLogging()](#initlogging), otherwise logging will not
-be initialized until `.initLogging()` is called. To initialize logging in the constructor
+`LoggedHttpAppRequest`.  The `logOptions`, if provided, is passed to
+[.initLogging()](#initlogging), otherwise logging will not be initialized
+until `.initLogging()` is called. To initialize logging in the constructor
 with the default options pass an empty object `{}`.
 
 The constructor will instantiate an empty
@@ -337,13 +336,9 @@ outside the context of an HTTP request (i.e.
 [LoggedHttpAppRequest](#loggedhttpapprequest)) will be saved in this session.
 The session directory will only be created if any data is actually logged.
 
-The constructor will take care to load environment variables and program
-arguments according to a common convention. Variables and arguments starting
-with `cfg.` or `-cfg.` will be adopted as config entries.
-
 ```js
 new LoggedHttpApp (
-	appRequest:HttpAppRequest,
+	appRequest:LoggedHttpAppRequest,
 	logOptions:Object|undefined
 );
 ```
@@ -1142,9 +1137,6 @@ var DeferredRecord = require( 'Logging/DeferredRecord' );
 TODO
 ----
 
-- If logged HTTP rq/rs don't have a name, they should be assigned an numeric name,
-  so they are associated with each other - since the order of receiving the responses
-  is not bound to the order of sending the requests.
 - For some reason `LOG_ALL_ON_ERROR` is much slower than `LOG_ALL`. Need to profile.
 - Right now LoggedHttpApp.close() closes the server and if there are unflushed
   deferred records and they are not of process of being flushed (i.e. there

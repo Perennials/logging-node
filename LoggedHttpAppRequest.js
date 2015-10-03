@@ -161,22 +161,34 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 		}
 	}
 
-	flushArbiter ( record ) {
-		return true;
-	}
-
 	finalizeStats () {
 		this._stats.saveTimer( this, 'Timing.Total' );
 		this._stats.setStat( 'Memory.Usage', process.memoryUsage().rss, 'b' );
 		return this._stats;
 	}
 
+	flushArbiter ( record ) {
+		return this._logPolicy == 'LOG_ALL';
+	}
+
+	flushDeferredLogs () {
+		this._logSession.flushDeferredLogs();
+	}
+
 	onError ( err ) {
+		if ( this._logPolicy == 'LOG_ALL_ON_ERROR' ) {
+			
+			this.setLogPolicy( 'LOG_ALL' );
+			this.flushDeferredLogs();
+
+		}
+
 		var logSession = this._logSession;
 		if ( logSession ) {
 			logSession.write( err, [ 'RECORD_EXCEPTION', 'DATA_TEXT' ] );
 		}
-		super.onError( err );
+
+		return super.onError( err );
 	}
 
 	dispose () {

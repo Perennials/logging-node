@@ -85,6 +85,7 @@ class LoggedHttpApp extends HttpApp {
 		if ( options.LogConsole !== false ) {
 			// hijack stdout/stderr so all console.log() and similar can be intercepted
 			this._consoleLogger = new ConsoleLogger( this._logSession );
+			this._consoleLogger.on( 'Stderr.Open', this._onStderrOpen.bind( this ) );
 		}
 
 		if ( options.LogHttp !== false ) {
@@ -96,7 +97,21 @@ class LoggedHttpApp extends HttpApp {
 	}
 
 	flushArbiter ( record ) {
-		return true;
+		return this._logPolicy == 'LOG_ALL';
+	}
+
+	flushDeferredLogs () {
+		this._logSession.flushDeferredLogs();
+	}
+
+	_onStderrOpen () {
+
+		if ( this._logPolicy == 'LOG_ALL_ON_ERROR' ) {
+			
+			this.setLogPolicy( 'LOG_ALL' );
+			this.flushDeferredLogs();
+
+		}
 	}
 
 	getLog () {
