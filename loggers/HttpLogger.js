@@ -10,6 +10,7 @@ var _nodeHttpRequest = Http.request.bind( Http );
 var _nodeHttpsRequest = Https.request.bind( Https );
 var _nodeClientRequestOnSocket = Http.ClientRequest.prototype.onSocket;
 var _lastClientRq = null;
+var _rqId = 0;
 
 // this a bit global functionality
 function HttpLogger ( app, unchunk ) {
@@ -60,6 +61,7 @@ HttpLogger.define( {
 		delete options.LogRecord;
 		var unchunk = null;
 		var logSession = null;
+		var reqId = (++_rqId).toString();
 
 		if ( LogRecord !== false ) {
 			
@@ -83,7 +85,8 @@ HttpLogger.define( {
 
 			LogRecord.RequestProps = ILogEngine.labelsToProps( LogRecord.RequestProps, {
 				RecordType: ILogEngine.RECORD_HTTP_REQUEST.Value,
-				DataType: ILogEngine.DATA_TEXT.Value
+				DataType: ILogEngine.DATA_TEXT.Value,
+				Name: reqId
 			} );
 			
 			_lastClientRq = { LogRecord: LogRecord, LogSession: logSession, UnchunkHttp: unchunk };
@@ -100,7 +103,8 @@ HttpLogger.define( {
 
 			LogRecord.ResponseProps = ILogEngine.labelsToProps( LogRecord.ResponseProps, {
 				RecordType: ILogEngine.RECORD_HTTP_RESPONSE.Value,
-				DataType: ILogEngine.DATA_TEXT.Value
+				DataType: ILogEngine.DATA_TEXT.Value,
+				Name: reqId
 			} );
 			
 			logSession.emit( 'Http.Response.Start', request, LogRecord.RequestProps, response, LogRecord.ResponseProps );
