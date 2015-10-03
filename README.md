@@ -13,11 +13,9 @@ The implementation is in `BETA` stage.
 	- [Session and record properties](#session-and-record-properties)
 		- [Session labels](#session-labels)
 		- [Record labels](#record-labels)
-	- [PerennialApp](#perennialapp)
+	- [LoggedHttpApp](#loggedhttpapp)
 		- [Methods](#methods)
 			- [Constructor](#constructor)
-			- [.loadConfig()](#loadconfig)
-			- [.getConfig()](#getconfig)
 			- [.initLogging()](#initlogging)
 			- [.getLog()](#getlog)
 			- [.getLogSession()](#getlogsession)
@@ -26,7 +24,7 @@ The implementation is in `BETA` stage.
 		- [Logging HTTP requests](#logging-http-requests)
 			- [Disabling the logging of a specific request](#disabling-the-logging-of-a-specific-request)
 			- [Specifying options for the log record](#specifying-options-for-the-log-record)
-	- [PerennialAppRequest](#perennialapprequest)
+	- [LoggedHttpAppRequest](#loggedhttpapprequest)
 		- [Methods](#methods-1)
 			- [Constructor](#constructor-1)
 			- [.initLogging()](#initlogging-1)
@@ -119,14 +117,14 @@ npm install https://github.com/Perennials/logging-node/tarball/master
 Example
 -------
 
-The module provides the [PerennialApp](#perennialapp) class which implements
+The module provides the [LoggedHttpApp](#loggedhttpapp) class which implements
 domain and error handling, as well as hooking of the console output and HTTP
 requests. The low level logging classes can be used separately but the
 automatic logging capabilities will remain unused. Running this example (it
 can be found in the examples directory) and requesting `localhost:1337` will
 create log session with a bunch of records.
 
-The [PerennialApp](#perennialapp) class extends
+The [LoggedHttpApp](#loggedhttpapp) class extends
 [HttpApp](https://github.com/Perennials/app-node#httpapp) of the [App
 module](https://github.com/Perennials/app-node). Check the links for
 explanation of the concept of reusing the `HttpApp` class.
@@ -134,11 +132,11 @@ explanation of the concept of reusing the `HttpApp` class.
 ```js
 "use strict"
 
-var PerennialApp = require( 'Logging/PerennialApp' );
-var PerennialAppRequest = require( 'Logging/PerennialAppRequest' );
+var LoggedHttpApp = require( 'Logging/LoggedHttpApp' );
+var LoggedHttpAppRequest = require( 'Logging/LoggedHttpAppRequest' );
 
-// this will be instantiated by PerennialApp whenever we have a new request coming in
-class MyAppRequest extends PerennialAppRequest {
+// this will be instantiated by LoggedHttpApp whenever we have a new request coming in
+class MyAppRequest extends LoggedHttpAppRequest {
 
 	constructor ( app, req, res ) {
 		// call the parent constructor
@@ -213,7 +211,7 @@ class MyAppRequest extends PerennialAppRequest {
 }
 
 // this is used for logging outside of a request context
-class MyApp extends PerennialApp {
+class MyApp extends LoggedHttpApp {
 
 	constructor ( appRequest ) {
 		var logOptions = {
@@ -296,17 +294,17 @@ The meaning of the keys and values is explained
 - `DATA_HTML`, translates to `DataType: 'HTML'`.
 
 
-### PerennialApp
+### LoggedHttpApp
 Extends [HttpApp](https://github.com/Perennials/app-node#httpapp). This is the
 main application class. It takes care of hooking the console output and HTTP
 requests of the application. The logging is domain aware and cooperates with
-[PerennialAppRequest](#perennialapprequest) - so the logs will be saved in
-the context of the current `PerennialAppRequest`, if any. If there is no
+[LoggedHttpAppRequest](#loggedhttpapprequest) - so the logs will be saved in
+the context of the current `LoggedHttpAppRequest`, if any. If there is no
 current request context the logs will be saved in the application level log
 session.
 
 ```js
-var PerennialApp = require( 'Logging/PerennialApp' );
+var LoggedHttpApp = require( 'Logging/LoggedHttpApp' );
 ```
 
 - [Methods](#methods)
@@ -315,8 +313,6 @@ var PerennialApp = require( 'Logging/PerennialApp' );
 #### Methods
 
 - [Constructor](#constructor)
-- [.loadConfig()](#loadconfig)
-- [.getConfig()](#getconfig)
 - [.initLogging()](#initlogging)
 - [.getLog()](#getlog)
 - [.getLogSession()](#getlogsession)
@@ -326,7 +322,7 @@ var PerennialApp = require( 'Logging/PerennialApp' );
 
 ##### Constructor
 The `appRequest` parameter is a constructor for a class derived
-`PerennialAppRequest`. The `host` and `port` parameters are used when creating an
+`LoggedHttpAppRequest`. The `host` and `port` parameters are used when creating an
 HTTP server and are passed directly to `http.Server.listen()`. The `logOptions`,
 if provided, is passed to [.initLogging()](#initlogging), otherwise logging will not
 be initialized until `.initLogging()` is called. To initialize logging in the constructor
@@ -338,7 +334,7 @@ The constructor will instantiate an empty
 The constructor will create a [DeferredLog](#deferredlog) and
 [DeferredSession](#deferredsession). That is an application log session. Log
 outside the context of an HTTP request (i.e.
-[PerennialAppRequest](#perennialapprequest)) will be saved in this session.
+[LoggedHttpAppRequest](#loggedhttpapprequest)) will be saved in this session.
 The session directory will only be created if any data is actually logged.
 
 The constructor will take care to load environment variables and program
@@ -346,30 +342,10 @@ arguments according to a common convention. Variables and arguments starting
 with `cfg.` or `-cfg.` will be adopted as config entries.
 
 ```js
-new PerennialApp (
+new LoggedHttpApp (
 	appRequest:HttpAppRequest,
 	logOptions:Object|undefined
 );
-```
-
-##### .loadConfig()
-Loads the application configs from the specified directory according to a
-common convention. The following config names will be loaded, if they exist,
-in the same order and stacked onto each other: `config.js`, `config.local.js`,
-`config/local.js`. They will be loaded with `require()` so they should do
-`module.exports` to export the desired config properties.
-
-```js
-.loadConfig(
-	dir:String
-) : Config;
-```
-
-##### .getConfig()
-Retrieves the config associated with the application.
-
-```js
-.getConfig() : Config;
 ```
 
 ##### .initLogging()
@@ -446,7 +422,7 @@ described in [.initLogging()](#initlogging).
 
 ##### .onClose()
 Implements a close handler for the application. It will close all log sessions
-created by the application and the `PerennialAppRequest`s.
+created by the application and the `LoggedHttpAppRequest`s.
 
 ```
 .onClose();
@@ -454,7 +430,7 @@ created by the application and the `PerennialAppRequest`s.
 
 
 #### Logging HTTP requests
-Normally HTTP requests will be hooked by the [PerennialApp](#perennialapp)
+Normally HTTP requests will be hooked by the [LoggedHttpApp](#loggedhttpapp)
 class and will be logged automatically. One can control the logging of these
 requests by placing a property called `LogRecord` inside the options passed to
 node's `http.request()` function.
@@ -503,15 +479,15 @@ var request = http.request( {
 ```
 
 
-### PerennialAppRequest
+### LoggedHttpAppRequest
 Extends [HttpAppRequest](https://github.com/Perennials/app-node#httpapprequest).
 
 This class should be derived and the constructor passed to the constructor of
-`PerennialApp`. A new instance will be created for each incoming HTTP
+`LoggedHttpApp`. A new instance will be created for each incoming HTTP
 request.
 
 ```js
-var PerennialAppRequest = require( 'Logging/PerennialAppRequest' );
+var LoggedHttpAppRequest = require( 'Logging/LoggedHttpAppRequest' );
 ```
 
 #### Methods
@@ -533,8 +509,8 @@ initialize logging in the constructor with the default options pass an empty
 object `{}`.
 
 ```js
-new PerennialAppRequest(
-	app: PerennialApp,
+new LoggedHttpAppRequest(
+	app: LoggedHttpApp,
 	req: IncommingMessage,
 	res: ServerResponse,
 	logOptions:Object|undefined
@@ -550,7 +526,7 @@ Initializes the logging in the context of this request.
 );
 ```
 
-The options are the same as with [PerennialApp.initLogging()](#initlogging),
+The options are the same as with [LoggedHttpApp.initLogging()](#initlogging),
 except for `StorageDir`, which is not a valid option here.
 
 
@@ -607,8 +583,8 @@ session and then call the parent handler which will print the error to
 
 ### FileLog
 This class is part of the low-level API and normally shouldn't be used
-directly, but only via [PerennialApp](#perennialapp) and
-[PerennialAppRequest](#perennialapprequest).
+directly, but only via [LoggedHttpApp](#loggedhttpapp) and
+[LoggedHttpAppRequest](#loggedhttpapprequest).
 
 ```js
 var FileLog = require( 'Logging/FileLog' );
@@ -731,8 +707,8 @@ function (
 
 ### FileSession
 This class is part of the low-level API and normally shouldn't be used
-directly, but only via [PerennialApp](#perennialapp) and
-[PerennialAppRequest](#perennialapprequest).
+directly, but only via [LoggedHttpApp](#loggedhttpapp) and
+[LoggedHttpAppRequest](#loggedhttpapprequest).
 
 ```js
 var FileSession = require( 'Logging/FileSession' );
@@ -961,8 +937,8 @@ function (
 
 ### FileRecord
 This class is part of the low-level API and normally shouldn't be used
-directly, but only via [PerennialApp](#perennialapp) and
-[PerennialAppRequest](#perennialapprequest).
+directly, but only via [LoggedHttpApp](#loggedhttpapp) and
+[LoggedHttpAppRequest](#loggedhttpapprequest).
 
 ```js
 var FileRecord = require( 'Logging/FileRecord' );
@@ -1108,8 +1084,8 @@ will result in errors.
 #### DeferredLog
 
 This class is part of the low-level API and normally shouldn't be used
-directly, but only via [PerennialApp](#perennialapp) and
-[PerennialAppRequest](#perennialapprequest).
+directly, but only via [LoggedHttpApp](#loggedhttpapp) and
+[LoggedHttpAppRequest](#loggedhttpapprequest).
 
 This class exposes the same methods and events as the [FileLog](#filelog),
 except for `.getStorageUri()`. All callbacks and events will receive
@@ -1127,8 +1103,8 @@ var DeferredLog = require( 'Logging/DeferredLog' );
 #### DeferredSession
 
 This class is part of the low-level API and normally shouldn't be used
-directly, but only via [PerennialApp](#perennialapp) and
-[PerennialAppRequest](#perennialapprequest).
+directly, but only via [LoggedHttpApp](#loggedhttpapp) and
+[LoggedHttpAppRequest](#loggedhttpapprequest).
 
 This class exposes the same methods and events as the
 [FileSession](#filesession). All callbacks and events will receive references
@@ -1146,8 +1122,8 @@ var DeferredSession = require( 'Logging/DeferredSession' );
 #### DeferredRecord
 
 This class is part of the low-level API and normally shouldn't be used
-directly, but only via [PerennialApp](#perennialapp) and
-[PerennialAppRequest](#perennialapprequest).
+directly, but only via [LoggedHttpApp](#loggedhttpapp) and
+[LoggedHttpAppRequest](#loggedhttpapprequest).
 
 This class exposes the same methods and events as the
 [FileRecord](#filerecord). All callbacks and events will receive references to

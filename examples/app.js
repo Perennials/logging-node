@@ -1,10 +1,10 @@
 "use strict"
 
-var PerennialApp = require( '../PerennialApp' );
-var PerennialAppRequest = require( '../PerennialAppRequest' );
+var LoggedHttpApp = require( '../LoggedHttpApp' );
+var LoggedHttpAppRequest = require( '../LoggedHttpAppRequest' );
 
-// this will be instantiated by PerennialApp whenever we have a new request coming in
-class MyAppRequest extends PerennialAppRequest {
+// this will be instantiated by LoggedHttpApp whenever we have a new request coming in
+class MyAppRequest extends LoggedHttpAppRequest {
 
 	constructor ( app, req, res ) {
 		// call the parent constructor
@@ -79,7 +79,7 @@ class MyAppRequest extends PerennialAppRequest {
 }
 
 // this is used for logging outside of a request context
-class MyApp extends PerennialApp {
+class MyApp extends LoggedHttpApp {
 
 	constructor ( appRequest ) {
 		var logOptions = {
