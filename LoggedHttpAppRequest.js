@@ -117,6 +117,10 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 			this.setLogPolicy( options.LogPolicy );
 		}
 
+		if ( this._logPolicy == 'LOG_NOTHING' ) {
+			return false;
+		}
+
 		var _this = this;
 
 		var props = [ 'SESSION_SERVER_REQUEST' ];

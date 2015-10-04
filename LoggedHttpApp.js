@@ -56,6 +56,10 @@ class LoggedHttpApp extends HttpApp {
 			this.setLogPolicy( options.LogPolicy );
 		}
 
+		if ( this._logPolicy === 'LOG_NOTHING' ) {
+			return false;
+		}
+
 		var props = [ 'SESSION_APP_RUN' ];
 		var sessionProps = options.SessionProps;
 		if ( sessionProps instanceof Array ) {
