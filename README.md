@@ -825,10 +825,13 @@ closing the record. It just uses the other APIs of the class to achieve this. Th
 parameter is the data to be written, the other arguments are passed directly to 
 [.openRecord()](#openrecord).
 
+If `props` are not passed, they will be autodected based on the data type,
+e.g. if it is `Error` or `Object`.
+
 ```js
 .write(
-	data:Buffer|String,
-	props:Object|String[],
+	data:Buffer|String|Error|Object,
+	props:Object|String[]|undefined,
 	callback:function( err:Error|null )|undefined
 );
 ```

@@ -115,31 +115,33 @@ UnitestA( 'LoggedHttpAppRequest logging', function ( test ) {
 			this._response.write( '123' );
 			this._response.end( '456' );
 			this.getLogSession().write( err, [ 'RECORD_EXCEPTION', 'DATA_TEXT' ], function ( err, id ) {
+				_this.getLogSession().write( new Error( 'test' ), function ( err, id ) {
 
-				test( !err );
-				_this._app.close( function () {
+					test( !err );
+					_this._app.close( function () {
 
-					_this.getLogSession().close( function () {
-						// if we have 8 files - two std streams, an exception, a meta, a close, a server env, server rq and rs, a debug
-						test( _this.getLogSession().getLoggedRecords().length === 9 );
+						_this.getLogSession().close( function () {
+							// if we have 8 files - two std streams, 2 exceptions, a meta, a close, a server env, server rq and rs, a debug
+							test( _this.getLogSession().getLoggedRecords().length === 10 );
 
-						//if the console calls went properly in the session
-						test.eq( 'asd\n', Fs.readFileSync( _this.getLogSession().getStorageUri() + '/' + _this.getLogSession().getLoggedRecords()[ 3 ], { encoding: 'utf8' } ) );
-						test.eq( 'qwe\n', Fs.readFileSync( _this.getLogSession().getStorageUri() + '/' + _this.getLogSession().getLoggedRecords()[ 4 ], { encoding: 'utf8' } ) );
-						//test the server response was logged
-						test( Fs.readFileSync( _this.getLogSession().getStorageUri() + '/' + _this.getLogSession().getLoggedRecords()[ 5 ], { encoding: 'utf8' } ).indexOf( '3\r\n123\r\n3\r\n456\r\n0\r\n' ) > 0 );
-						
+							//if the console calls went properly in the session
+							test.eq( 'asd\n', Fs.readFileSync( _this.getLogSession().getStorageUri() + '/' + _this.getLogSession().getLoggedRecords()[ 3 ], { encoding: 'utf8' } ) );
+							test.eq( 'qwe\n', Fs.readFileSync( _this.getLogSession().getStorageUri() + '/' + _this.getLogSession().getLoggedRecords()[ 4 ], { encoding: 'utf8' } ) );
+							//test the server response was logged
+							test( Fs.readFileSync( _this.getLogSession().getStorageUri() + '/' + _this.getLogSession().getLoggedRecords()[ 5 ], { encoding: 'utf8' } ).indexOf( '3\r\n123\r\n3\r\n456\r\n0\r\n' ) > 0 );
+							
 
-						var session = app1.getLogSession();
+							var session = app1.getLogSession();
 
-						// meta, env, rq, rs, close
-						test( session.getLoggedRecords().length === 5 );
-						
-						rm( '-rf', logsDir );
-						test.out();
+							// meta, env, rq, rs, close
+							test( session.getLoggedRecords().length === 5 );
+							
+							rm( '-rf', logsDir );
+							test.out();
+
+						} );
 
 					} );
-
 				} );
 			} );
 		}

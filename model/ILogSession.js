@@ -46,7 +46,12 @@ ILogSession.extend( Events.EventEmitter, {
 
 		if ( props instanceof Function ) {
 			callback = props;
-			props = [ 'RECORD_GENERIC', String.isString( data ) ? 'DATA_TEXT' : 'DATA_JSON' ];
+			if ( data instanceof Error ) {
+				props = [ 'RECORD_EXCEPTION', 'DATA_TEXT' ];
+			}
+			else {
+				props = [ 'RECORD_GENERIC', String.isString( data ) ? 'DATA_TEXT' : 'DATA_JSON' ];
+			}
 		}
 
 		props = ILogEngine.labelsToProps( props, ILogEngine.DefaultRecordProps );
