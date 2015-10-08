@@ -83,7 +83,7 @@ UnitestA( 'SESSION_APP_RUN logs upon console.log()', function ( test ) {
 
 		} );
 
-		records.map( 'close' );
+		records.map( it => it.close() );
 
 	}, 100 );
 

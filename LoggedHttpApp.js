@@ -162,7 +162,7 @@ class LoggedHttpApp extends HttpApp {
 
 			// if we don't have a callback just dispose everything, nothing to wait
 			if ( !(callback instanceof Function) ) {
-				_this._requests.map( 'dispose' );
+				_this._requests.map( it => it.dispose() );
 				return;
 			}
 

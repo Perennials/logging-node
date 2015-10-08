@@ -146,7 +146,7 @@ class Unchunker {
 			if ( i === 0 ) {
 				return line;
 			}
-			line = line.split( ':' ).map( 'trim' );
+			line = line.split( ':' ).map( it => it.trim() );
 			newheaders[ line[ 0 ].toLowerCase() ] = line[ 1 ];
 		} );
 
