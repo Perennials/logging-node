@@ -1,6 +1,6 @@
 Logging
 =======
-Logging module for Node.js, implementation of <https://perennial.atlassian.net/wiki/display/DV2/Logging>.
+Logging module for Node.js, implementation of [these specs](https://github.com/Perennials/logging-node/blob/master/specs/README.md).
 
 The implementation is in `BETA` stage.
 
