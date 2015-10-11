@@ -3,7 +3,7 @@ Logs structure (v0.11)
 
 Logs are saved in a very generic structure which allows saving any type of data and creating custom conventions for the need of the applications. There are only two units in this structure - **log sessions** and **log records**.
 
-![Diagram](/log-structure.png?raw=true)
+![Diagram](/specs/log-structure.png?raw=true)
 
 ### Sessions
 A **log session** is a logical group of **log records**. Usually it corresponds to a request to the server. So one request equals one log session. Log sessions can be linked together in parent-child relationship. This way different requests, for different purpose, made at different time, possibly to different applications, can be linked together. For example the client can initiate a search and start a log session, it then sends the **log session id** to the backend together with the search request. The backend starts a new log session which is a child to the log session started by the client. The backend can make new requests to other components with their own log sessions and be their parent session. The next day maybe a booking is performed which is again linked to the appropriate parent log session. This way all logs of a logical workflow can be grouped together and tracked. The session is also assigned a list of properties as key-value pairs used to describe the session so the Log Analyser can properly work with it. The key-value properties can be used to create conventions for the need of the applications. Bellow a list of predefined keys and values is given, which the Log Analyser and the Log UI are able to recognise in the context of Perennial's field of work.
