@@ -201,10 +201,13 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 			
 			this.finalizeStats();
 
-			for ( var steamName in this._logStreams ) {
+			var _this = this;
+			for ( let steamName in this._logStreams ) {
 				var logStream = this._logStreams[ steamName ];
 				if ( logStream ) {
-					logStream.close();
+					logStream.close( function () {
+						_this._logStreams[ steamName ] = null;
+					} );
 				}
 			}
 
@@ -213,7 +216,9 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 				if ( this._initOptions.LogEnvironment !== false ) {
 					logSession.write( this._stats.getStats(), [ 'RECORD_DEBUG', 'DATA_JSON' ] );
 				}
-				logSession.close();
+				logSession.close( function () {
+					_this._logSession = null;
+				} );
 			}
 
 			super.dispose();
