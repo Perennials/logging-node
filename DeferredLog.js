@@ -10,6 +10,8 @@ function DeferredLog ( constructor ) {
 	this._ctorParams = Array.prototype.slice.call( arguments, 1 );
 	this._deferredSessions = [];
 
+	this.setMaxListeners( 0 );
+
 	this.emit( 'Log.Opened', null, this );
 	
 	//todo: this is not entirely correct and assumes knowledge about the ctor
