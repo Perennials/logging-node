@@ -83,13 +83,18 @@ HttpLogger.define( {
 			}
 
 
-			LogRecord.RequestProps = ILogEngine.labelsToProps( LogRecord.RequestProps, {
-				RecordType: ILogEngine.RECORD_HTTP_REQUEST.Value,
-				DataType: ILogEngine.DATA_TEXT.Value,
-				Name: reqId
-			} );
-			
-			_lastClientRq = { LogRecord: LogRecord, LogSession: logSession, UnchunkHttp: unchunk };
+			if ( logSession ) {
+				LogRecord.RequestProps = ILogEngine.labelsToProps( LogRecord.RequestProps, {
+					RecordType: ILogEngine.RECORD_HTTP_REQUEST.Value,
+					DataType: ILogEngine.DATA_TEXT.Value,
+					Name: reqId
+				} );
+				
+				_lastClientRq = { LogRecord: LogRecord, LogSession: logSession, UnchunkHttp: unchunk };
+			}
+			else {
+				LogRecord = false;
+			}
 		}
 
 		var request = originalCall( options, callback );
