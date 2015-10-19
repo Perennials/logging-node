@@ -118,17 +118,18 @@ UnitestA( 'LoggedHttpAppRequest logging', function ( test ) {
 				_this.getLogSession().write( new Error( 'test' ), function ( err, id ) {
 
 					test( !err );
+					var logSession = _this.getLogSession();
 					_this._app.close( function () {
 
-						_this.getLogSession().close( function () {
+						logSession.close( function () {
 							// if we have 8 files - two std streams, 2 exceptions, a meta, a close, a server env, server rq and rs, a debug
-							test( _this.getLogSession().getLoggedRecords().length === 10 );
+							test( logSession.getLoggedRecords().length === 10 );
 
 							//if the console calls went properly in the session
-							test.eq( 'asd\n', Fs.readFileSync( _this.getLogSession().getStorageUri() + '/' + _this.getLogSession().getLoggedRecords()[ 3 ], { encoding: 'utf8' } ) );
-							test.eq( 'qwe\n', Fs.readFileSync( _this.getLogSession().getStorageUri() + '/' + _this.getLogSession().getLoggedRecords()[ 4 ], { encoding: 'utf8' } ) );
+							test.eq( 'asd\n', Fs.readFileSync( logSession.getStorageUri() + '/' + logSession.getLoggedRecords()[ 3 ], { encoding: 'utf8' } ) );
+							test.eq( 'qwe\n', Fs.readFileSync( logSession.getStorageUri() + '/' + logSession.getLoggedRecords()[ 4 ], { encoding: 'utf8' } ) );
 							//test the server response was logged
-							test( Fs.readFileSync( _this.getLogSession().getStorageUri() + '/' + _this.getLogSession().getLoggedRecords()[ 5 ], { encoding: 'utf8' } ).indexOf( '3\r\n123\r\n3\r\n456\r\n0\r\n' ) > 0 );
+							test( Fs.readFileSync( logSession.getStorageUri() + '/' + logSession.getLoggedRecords()[ 5 ], { encoding: 'utf8' } ).indexOf( '3\r\n123\r\n3\r\n456\r\n0\r\n' ) > 0 );
 							
 
 							var session = app1.getLogSession();
