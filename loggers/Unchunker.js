@@ -2,6 +2,7 @@
 
 var Fs = require( 'fs' );
 var Zlib = require( 'zlib' );
+try {var SnappyStream = require( 'snappy-stream' );}catch ( e ) {}
 
 const TRAILER = '\r\n\r\n';
 const PADDING = 16;
@@ -11,17 +12,17 @@ class Unchunker {
 	constructor ( dest, literalChunkSize ) {
 		this._dest = dest;
 		this._headers = [];
-		this._zlib = null;
+		this._uncompress = null;
 		this._unchunk = false;
 		this._savedPos = 0;
 		this._messageSize = 0;
-		this._zlibWrites = 0;
+		this._uncompressWrites = 0;
 		this._closed = false;
 		this._literalChunkSize = literalChunkSize;
 		this._leftOvers = null;
 		this._lastChunk = false;
 		this.write = this._bufferHeaders;
-		this._onZlibChunk = this._onZlibChunk.bind( this );
+		this._onUncompressChunk = this._onUncompressChunk.bind( this );
 	}
 
 	static _headersHasEnded ( headers ) {
@@ -94,9 +95,9 @@ class Unchunker {
 				data = data.slice( pos2, pos2 + size );
 			}
 		}
-		if ( this._zlib ) {
-			++this._zlibWrites;
-			this._zlib.write( data, this._onZlibChunk );
+		if ( this._uncompress ) {
+			++this._uncompressWrites;
+			this._uncompress.write( data, this._onUncompressChunk );
 		}
 		else {
 			this._messageSize += size;
@@ -104,13 +105,13 @@ class Unchunker {
 		}
 	}
 
-	_onZlibChunk () {
-		var data = this._zlib.read();
+	_onUncompressChunk () {
+		var data = this._uncompress.read();
 		if ( data ) {
 			this._messageSize += data.length;
 			this._dest.write( data );
 		}
-		if ( --this._zlibWrites === 0 && this._closed ) {
+		if ( --this._uncompressWrites === 0 && this._closed ) {
 			this._close();
 		}
 	}
@@ -152,10 +153,13 @@ class Unchunker {
 
 		var encoding = newheaders[ 'content-encoding' ];
 		if ( encoding == 'gzip' ) {
-			this._zlib = Zlib.createGunzip();
+			this._uncompress = Zlib.createGunzip();
 		}
 		else if ( encoding == 'deflate' ) {
-			this._zlib = Zlib.createInflate();
+			this._uncompress = Zlib.createInflate();
+		}
+		else if ( encodding == 'snappy' && SnappyStream ) {
+			this._uncompress = SnappyStream.createUncompressStream();
 		}
 		if ( encoding !== undefined && encoding != 'identity' ) {
 			newheaders[ 'x-logging-node-original-content-encoding' ] = encoding;
@@ -163,7 +167,7 @@ class Unchunker {
 		}
 
 		var len = newheaders[ 'content-length' ];
-		if ( len !== undefined && this._zlib === null ) {
+		if ( len !== undefined && this._uncompress === null ) {
 			// we have nothing to do
 			this.write = this._dest.write.bind( this._dest );
 			this.write( this._headers.join( '' ) );
@@ -212,7 +216,7 @@ class Unchunker {
 	close () {
 
 		this._closed = true;
-		if ( this._zlibWrites === 0 ) {
+		if ( this._uncompressWrites === 0 ) {
 			this._close();
 		}
 	}

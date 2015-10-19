@@ -15,6 +15,7 @@
 		"Stats": "https://github.com/perennials/stats-node/tarball/master"
 	},
 	"devDependencies": {
+		"snappy-stream": "2.0.x",
 		"Net": "https://github.com/perennials/net-node/tarball/master",
 		"Unitest": "https://github.com/perennials/unitest-js/tarball/master",
 		"shelljs": "*"
