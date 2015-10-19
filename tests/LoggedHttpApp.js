@@ -133,6 +133,7 @@ UnitestA( 'LoggedHttpAppRequest logging', function ( test ) {
 							
 
 							var session = app1.getLogSession();
+							test.eq( [ session.getId() ], JSON.parse( Fs.readFileSync( logSession.getStorageUri() + '/' + logSession.getLoggedRecords()[ 0 ], { encoding: 'utf8' } ) ).LinkedTokens );
 
 							// meta, env, rq, rs, close
 							test( session.getLoggedRecords().length === 5 );

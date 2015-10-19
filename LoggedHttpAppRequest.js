@@ -163,6 +163,31 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 				Stderr: this._logSession.openRecord( [ 'STDERR', 'RECORD_STREAM', 'DATA_TEXT' ] ),
 			};
 		}
+
+		// add link to the parent session, or when it is opened
+		this._logSession.on( 'Deferred.Flush', function ( err, logSession ) {
+			if ( !err && logSession ) {
+				var parentSession = _this.getApp().getLogSession();
+				var parentId = parentSession.getId();
+				if ( parentId ) {
+					// not sure if to add link in the parent too, for now add it only in the child because
+					// it follows the logic that child has parentId, and this is the same as parentId
+					// parentSession.addLinkedToken( logSession.getId() );
+					logSession.addLinkedToken( parentId );
+				}
+				else {
+					parentSession.on( 'Deferred.Flush', function ( err, session ) {
+						if ( !err && logSession ) {
+							// not sure if to add link in the parent too, for now add it only in the child because
+							// it follows the logic that child has parentId, and this is the same as parentId
+							// session.addLinkedToken( logSession.getId() );
+							logSession.addLinkedToken( session.getId() );
+						}
+					} )
+				}
+			}
+		} );
+
 	}
 
 	finalizeStats () {
