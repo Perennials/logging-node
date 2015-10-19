@@ -76,6 +76,7 @@ class FileSession extends ILogSession {
 			LogSession: null,
 			ParentSession: null,
 			LinkedTokens: [],
+			UserData: {},
 			SessionType: props.SessionType || null,
 			TimeStamp: null
 		};
@@ -85,6 +86,10 @@ class FileSession extends ILogSession {
 
 		if ( props.LinkedTokens ) {
 			this._meta.LinkedTokens = props.LinkedTokens;
+		}
+
+		if ( props.UserData ) {
+			this._meta.UserData = props.UserData;
 		}
 
 		this._makeSessionId( this._meta.SessionType, fileName, sessionName, function ( err, index, id ) {
@@ -213,6 +218,12 @@ class FileSession extends ILogSession {
 		this._meta.LinkedTokens.push( token );
 		this._updateMetaRecord();
 		return this;
+	}
+
+	setUserData ( key, value ) {
+		this._meta.UserData[ key ] = value;
+		this._updateMetaRecord();
+		return this;	
 	}
 
 	isIdle () {

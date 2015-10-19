@@ -1,4 +1,4 @@
-Logs structure (v0.11)
+Logs structure (v0.12)
 ----------------------
 
 Logs are saved in a very generic structure which allows saving any type of data and creating custom conventions for the need of the applications. There are only two units in this structure - **log sessions** and **log records**.
@@ -31,6 +31,12 @@ Describes the logical type of the sesion.
 One or more tokens that represent links to other log sessions. Sometimes sessions can not be linked via parent-child relationship because of different reasons. Log sessions having the same token are linked together, meaning they belong to the same flow and should be treated as part of the same log session tree. It is outside the scope of this document to define how to ensure that the tokens will remain unique to the application that generated them.
 
 - Type: `string[]`
+- Values: any
+
+##### UserData
+A mapping where the key is a string and the value is any valid JSON value. Can be used to store custom data and construct custom conventions.
+
+- Type: `mapping`
 - Values: any
 
 ### Records

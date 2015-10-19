@@ -170,6 +170,7 @@ UnitestA( 'addLinkedToken and meta queueing', function ( test ) {
 	var session = app1.getLogSession();
 
 	session.addLinkedToken( 'token.asd' );
+	session.setUserData( 'asd', 'qwe' );
 	
 	session.write( 'asd' );
 
@@ -177,11 +178,14 @@ UnitestA( 'addLinkedToken and meta queueing', function ( test ) {
 
 		session.addLinkedToken( 'token.qwe' );
 		session.addLinkedToken( 'token.zxc' );
+		session.setUserData( 'qwe', 'zxc' );
 		
 		session.wait( function () {
 
 			var meta = Fs.readFileSync( session.getStorageUri() + '/' + session.getLoggedRecords()[ 0 ], { encoding: 'utf8' } );
-			test.eq( JSON.parse( meta ).LinkedTokens, [ 'token.asd', 'token.qwe', 'token.zxc' ] );
+			var meta = JSON.parse( meta );
+			test.eq( meta.LinkedTokens, [ 'token.asd', 'token.qwe', 'token.zxc' ] );
+			test.eq( meta.UserData, { 'asd': 'qwe', 'qwe': 'zxc' } );
 
 			app1.close( function () {
 

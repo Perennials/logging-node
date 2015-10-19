@@ -3,6 +3,7 @@
 var ILogSession = require( './model/ILogSession' );
 var DeferredRecord = require( './DeferredRecord' );
 var ProxyEvents = require( './DeferredHelpers' ).ProxyEvents;
+var Helpers = require( './Helpers' );
 
 class DeferredSession extends ILogSession {
 
@@ -37,6 +38,7 @@ class DeferredSession extends ILogSession {
 		this._ctorCallback = callback;
 		this._deferredRecords = [];
 		this._tokens = [];
+		this._userData = {};
 		this._openingSession = false;
 		this._closed = false;
 		this._flushArbiter = null;
@@ -60,18 +62,10 @@ class DeferredSession extends ILogSession {
 		this._openingSession = 2;
 
 		if ( this._tokens.length > 0 ) {
-			var props = this._ctorProps;
-			if ( props instanceof Array ) {
-				props.push( { LinkedTokens: this._tokens } );
-			}
-			else if ( Object.isObject( props ) ) {
-				if ( props.LinkedTokens ) {
-					props.LinkedTokens = props.LinkedTokens.concat( this._tokens );
-				}
-				else {
-					props.LinkedTokens = this._tokens;
-				}
-			}
+			Helpers.addSessionPropRaw( this._ctorProps, 'LinkedTokens', this._tokens, true );
+		}
+		if ( Object.keys( this._userData ).length > 0 ) {
+			Helpers.addSessionPropRaw( this._ctorProps, 'UserData', this._userData, true );
 		}
 
 		var _this = this;
@@ -193,6 +187,15 @@ class DeferredSession extends ILogSession {
 			this._tokens.push( token );
 		}
 		return this;
+	}
+
+	setUserData ( key, value ) {
+		if ( this._session ) {
+			this._session.setUserData( key, value );
+		}
+		else {
+			this._userData[ key ] = value;
+		}
 	}
 
 	openRecord ( props, callback ) {
