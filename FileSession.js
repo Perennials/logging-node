@@ -171,19 +171,33 @@ class FileSession extends ILogSession {
 		return this._fileCount - 1;
 	}
 
-	_updateMetaRecord () {
+	_updateMetaRecord ( _int ) {
 		if ( this._metaRecord === null ) {
+			return;
+		}
+		if ( this._pendingWrites == 0 ) {
+			++this._pendingWrites;
+		}
+		else if ( this._pendingWrites == 1 && !_int ) {
+			++this._pendingWrites;
+			return;
+		}
+		else if ( this._pendingWrites == 2 ) {
 			return;
 		}
 			
 		var _this = this;
-		++this._pendingWrites;
 		Fs.writeFile( this._metaRecord, JSON.stringify( this._meta ), function ( err ) {
 			if ( err ) {
 				_this.emit( 'Session.Meta.Error', err );
 			}
+
+			--_this._pendingWrites;
 			
-			if ( --_this._pendingWrites === 0 && _this.isIdle() ) {
+			if ( _this._pendingWrites > 0 ) {
+				_this._updateMetaRecord( true );
+			}
+			else if ( _this._pendingWrites === 0 && _this.isIdle() ) {
 				_this.emit( 'Session.Idle' );
 			}
 		} );

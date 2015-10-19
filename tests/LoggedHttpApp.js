@@ -159,3 +159,40 @@ UnitestA( 'LoggedHttpAppRequest logging', function ( test ) {
 		.send( 'asd.qwe' );
 
 } );
+
+
+UnitestA( 'addLinkedToken and meta queueing', function ( test ) {
+	var app1 = new LoggedHttpApp( null, { StorageDir: logsDir } );
+	mkdir( '-p', logsDir );
+	test( Fs.existsSync( logsDir ) );
+	
+	var session = app1.getLogSession();
+
+	session.addLinkedToken( 'token.asd' );
+	
+	session.write( 'asd' );
+
+	setTimeout( function () {
+
+		session.addLinkedToken( 'token.qwe' );
+		session.addLinkedToken( 'token.zxc' );
+		
+		session.wait( function () {
+
+			var meta = Fs.readFileSync( session.getStorageUri() + '/' + session.getLoggedRecords()[ 0 ], { encoding: 'utf8' } );
+			test.eq( JSON.parse( meta ).LinkedTokens, [ 'token.asd', 'token.qwe', 'token.zxc' ] );
+
+			app1.close( function () {
+
+				session.close( function () {
+					rm( '-rf', logsDir );
+					test.out();
+				} );
+
+			} );
+		} );
+
+
+	}, 100 );
+
+} );

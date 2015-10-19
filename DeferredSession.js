@@ -60,10 +60,9 @@ class DeferredSession extends ILogSession {
 		this._openingSession = 2;
 
 		if ( this._tokens.length > 0 ) {
-			
 			var props = this._ctorProps;
 			if ( props instanceof Array ) {
-				props = props.concat( { LinkedTokens: this._tokens } );
+				props.push( { LinkedTokens: this._tokens } );
 			}
 			else if ( Object.isObject( props ) ) {
 				if ( props.LinkedTokens ) {

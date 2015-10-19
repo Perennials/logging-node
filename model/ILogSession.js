@@ -46,11 +46,15 @@ ILogSession.extend( Events.EventEmitter, {
 
 		if ( props instanceof Function ) {
 			callback = props;
+			props = undefined;
+		}
+
+		if ( props === undefined ) {
 			if ( data instanceof Error ) {
 				props = [ 'RECORD_EXCEPTION', 'DATA_TEXT' ];
 			}
 			else {
-				props = [ 'RECORD_GENERIC', String.isString( data ) ? 'DATA_TEXT' : 'DATA_JSON' ];
+				props = [ 'RECORD_GENERIC', String.isString( data ) ? 'DATA_TEXT' : data instanceof Buffer ? 'DATA_BINARY' : 'DATA_JSON' ];
 			}
 		}
 
