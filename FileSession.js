@@ -221,7 +221,12 @@ class FileSession extends ILogSession {
 	}
 
 	setUserData ( key, value ) {
-		this._meta.UserData[ key ] = value;
+		if ( key instanceof Object ) {
+			this._meta.UserData.merge( key );
+		}
+		else {
+			this._meta.UserData[ key ] = value;
+		}
 		this._updateMetaRecord();
 		return this;	
 	}

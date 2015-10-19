@@ -55,6 +55,7 @@ The implementation is in `BETA` stage.
 			- [.getOpenRecords()](#getopenrecords)
 			- [.getLoggedRecords()](#getloggedrecords)
 			- [.addLinkedToken()](#addlinkedtoken)
+			- [.setUserData()](#setuserdata)
 			- [.setParentSession()](#setparentsession)
 			- [.write()](#write)
 			- [.wait()](#wait-1)
@@ -723,6 +724,7 @@ var FileSession = require( 'Logging/FileSession' );
 - [.getOpenRecords()](#getopenrecords)
 - [.getLoggedRecords()](#getloggedrecords)
 - [.addLinkedToken()](#addlinkedtoken)
+- [.setUserData()](#setuserdata)
 - [.setParentSession()](#setparentsession)
 - [.write()](#write)
 - [.wait()](#wait-1)
@@ -807,6 +809,23 @@ Associates a token with the log session.
 ```js
 .addLinkedToken(
 	token:String
+) : this;
+```
+
+##### .setUserData()
+Stores custom user data in the log session meta.
+Accepts either key and value or a mapping of keys and values.
+
+```js
+.setUserData(
+	key:String,
+	value:mixed
+) : this;
+```
+
+```js
+.setUserData(
+	data:Object
 ) : this;
 ```
 

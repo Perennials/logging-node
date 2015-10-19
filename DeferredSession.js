@@ -194,7 +194,12 @@ class DeferredSession extends ILogSession {
 			this._session.setUserData( key, value );
 		}
 		else {
-			this._userData[ key ] = value;
+			if ( key instanceof Object ) {
+				this._userData.merge( key );
+			}
+			else {
+				this._userData[ key ] = value;
+			}
 		}
 	}
 

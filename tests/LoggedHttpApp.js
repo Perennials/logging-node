@@ -178,7 +178,7 @@ UnitestA( 'addLinkedToken and meta queueing', function ( test ) {
 
 		session.addLinkedToken( 'token.qwe' );
 		session.addLinkedToken( 'token.zxc' );
-		session.setUserData( 'qwe', 'zxc' );
+		session.setUserData( { 'qwe': 'zxc' } );
 		
 		session.wait( function () {
 
