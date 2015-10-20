@@ -1,5 +1,7 @@
 "use strict";
 
+require( 'Prototype' );
+
 class Helpers {
 
 	static addSessionProp ( options, propName, propValue, mergeExisting ) {
@@ -20,7 +22,21 @@ class Helpers {
 		if ( sessionProps instanceof Array ) {
 			var obj = {};
 			obj[ propName ] = propValue;
-			sessionProps.unshift( obj );
+			var existing = undefined;
+			for ( var it of sessionProps ) {
+				if ( it instanceof Object && it[ propName ] !== undefined ) {
+					existing = it;
+					break;
+				}
+			}
+			if ( existing !== undefined ) {
+				if ( mergeExisting ) {
+					Helpers.addSessionPropRaw( existing, propName, propValue, true );
+				}
+			}
+			else {
+				sessionProps.unshift( obj );
+			}
 		}
 		else if ( sessionProps instanceof Object ) {
 			var existing = sessionProps[ propName ];
@@ -30,7 +46,7 @@ class Helpers {
 			else if ( mergeExisting ) {
 				if ( existing instanceof Array ) {
 					var changed = false;
-					existing.map( it => {
+					existing.forEach( it => {
 						if ( Object.isObject( it ) && it[ propValue ] !== undefined ) {
 							Helpers.addSessionPropRaw( it, propName, propValue, true );
 							changed = true;
@@ -49,6 +65,9 @@ class Helpers {
 				}
 				else if ( Object.isObject( existing ) && Object.isObject( propValue ) ) {
 					existing.mergeDeep( propValue );
+				}
+				else {
+					sessionProps[ propName ] = propValue;
 				}
 			}
 		}
