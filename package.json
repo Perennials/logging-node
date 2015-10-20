@@ -1,7 +1,7 @@
 {
 	"name": "Logging",
 	"description": "Logging module Node.js",
-	"version": "0.10.2",
+	"version": "0.10.3",
 	"author": "Borislav Peev <borislav.asdf@gmail.com>",
 	"engine": [
 		"node >= 4.0.0"

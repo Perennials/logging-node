@@ -74,6 +74,7 @@ class FileSession extends ILogSession {
 			Api: FileLog.Api,
 			ApiVersion: FileLog.ApiVersion,
 			LogSession: null,
+			Name: sessionName.length > 0 ? sessionName : null,
 			ParentSession: null,
 			LinkedTokens: [],
 			UserData: {},

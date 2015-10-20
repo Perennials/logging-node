@@ -90,6 +90,9 @@ Describes the logical type of the record.
     
         // Log session id.
         LogSession: "<string>",
+
+        // Log session name,
+        Name: "<string>|null",
     
         // Parent log session id.
         ParentSession: "<string>|null",

@@ -70,6 +70,7 @@ UnitestA( 'FileLog.openSession()', function ( test ) {
 			test( meta.Api == FileLog.Api );
 			test( meta.LogSession == session.getId() );
 			test( meta.ParentSession == '123' );
+			test( meta.Name == 'Sesiq' );
 			test.eq( meta.LinkedTokens, [ 'asd', 'qwe' ] );
 
 			// clean everything
