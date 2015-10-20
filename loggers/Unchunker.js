@@ -158,7 +158,7 @@ class Unchunker {
 		else if ( encoding == 'deflate' ) {
 			this._uncompress = Zlib.createInflate();
 		}
-		else if ( encodding == 'snappy' && SnappyStream ) {
+		else if ( encoding == 'snappy' && SnappyStream ) {
 			this._uncompress = SnappyStream.createUncompressStream();
 		}
 		if ( encoding !== undefined && encoding != 'identity' ) {
