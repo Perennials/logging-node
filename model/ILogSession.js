@@ -9,9 +9,14 @@ function ILogSession ( log, parentId, props, callback ) {
 	this._index = null;
 	this._parentId = parentId;
 	this._props = props;
+	this._meta = null;
 }
 
 ILogSession.extend( Events.EventEmitter, {
+
+	getMeta: function () {
+		return this._meta;
+	},
 	
 	getLog: function () {
 		return this._log;

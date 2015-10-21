@@ -48,6 +48,7 @@ The implementation is in `BETA` stage.
 		- [Methods](#methods-3)
 			- [.openRecord()](#openrecord)
 			- [.getLog()](#getlog-1)
+			- [.getMeta()](#getmeta)
 			- [.getId()](#getid)
 			- [.getParentId()](#getparentid)
 			- [.getProps()](#getprops)
@@ -717,6 +718,7 @@ var FileSession = require( 'Logging/FileSession' );
 
 - [.openRecord()](#openrecord)
 - [.getLog()](#getlog-1)
+- [.getMeta()](#getmeta)
 - [.getId()](#getid)
 - [.getParentId()](#getparentid)
 - [.getProps()](#getprops)
@@ -753,6 +755,13 @@ Retrieves the file log instance associated with this session.
 
 ```js
 .getLog() : FileLog;
+```
+
+##### .getMeta()
+Retrieves the session meta information. The format is according to the specs.
+
+```js
+.getMeta() : Object|null;
 ```
 
 

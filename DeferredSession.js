@@ -121,6 +121,14 @@ class DeferredSession extends ILogSession {
 		return this._log;
 	}
 
+	getMeta () {
+		var obj = this._session;
+		if ( obj ) {
+			return obj.getMeta();
+		}
+		return null;
+	}
+
 	getId () {
 		var obj = this._session;
 		if ( obj ) {
