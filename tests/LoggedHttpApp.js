@@ -5,6 +5,7 @@ var FileSession = require( '../FileSession' );
 var LoggedHttpAppRequest = require( '../LoggedHttpAppRequest' );
 var HttpRequest = require( 'Net/HttpRequest' );
 var Fs = require( 'fs' );
+var LinkedToken = require( '../LinkedToken' );
 
 require( 'shelljs/global' );
 
@@ -133,8 +134,8 @@ UnitestA( 'LoggedHttpAppRequest logging', function ( test ) {
 							
 
 							var session = app1.getLogSession();
-							test.eq( [ session.getId() ], JSON.parse( Fs.readFileSync( logSession.getStorageUri() + '/' + logSession.getLoggedRecords()[ 0 ], { encoding: 'utf8' } ) ).LinkedTokens );
-							test.eq( [ logSession.getId() ], JSON.parse( Fs.readFileSync( session.getStorageUri() + '/' + session.getLoggedRecords()[ 0 ], { encoding: 'utf8' } ) ).LinkedTokens );
+							test.eq( [ { Type: LinkedToken.Type.LOGSESSION, Relation: LinkedToken.Relation.PARENT, Value: session.getId() } ], JSON.parse( Fs.readFileSync( logSession.getStorageUri() + '/' + logSession.getLoggedRecords()[ 0 ], { encoding: 'utf8' } ) ).LinkedTokens );
+							test.eq( [ { Type: LinkedToken.Type.LOGSESSION, Relation: LinkedToken.Relation.CHILD, Value: logSession.getId() } ], JSON.parse( Fs.readFileSync( session.getStorageUri() + '/' + session.getLoggedRecords()[ 0 ], { encoding: 'utf8' } ) ).LinkedTokens );
 
 							// meta, env, rq, rs, close
 							test( session.getLoggedRecords().length === 5 );

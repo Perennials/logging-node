@@ -3,6 +3,7 @@ var FileSession = require( '../FileSession.js' );
 var ILogEngine = require( '../model/ILogEngine.js' );
 var Path = require( 'path' );
 var Fs = require( 'fs' );
+var LinkedToken = require( '../LinkedToken' );
 
 require( 'shelljs/global' );
 
@@ -49,8 +50,7 @@ UnitestA( 'FileLog.openSession()', function ( test ) {
 			return;
 		}
 
-		// start a session with parent and name
-		log.openSession( '123', [ 'Sesiq', { LinkedTokens: [ 'asd', 'qwe' ] } ], function ( err, session ) {
+		log.openSession( [ 'Sesiq', { LinkedTokens: [ 'asd', 'qwe' ] } ], function ( err, session ) {
 
 			test( !err );
 
@@ -69,7 +69,6 @@ UnitestA( 'FileLog.openSession()', function ( test ) {
 			test( meta.Protocol == FileLog.Protocol );
 			test( meta.Api == FileLog.Api );
 			test( meta.LogSession == session.getId() );
-			test( meta.ParentSession == '123' );
 			test( meta.Name == 'Sesiq' );
 			test.eq( meta.LinkedTokens, [ 'asd', 'qwe' ] );
 
@@ -99,8 +98,7 @@ UnitestA( 'FileLog.openSession() 2', function ( test ) {
 			return;
 		}
 
-		// start a session with parent and name
-		log.openSession( [ 'Sesiq', { ParentSession: 'qwe', DirectoryFormat: 'myapp' + FileSession.DirectoryFormat } ], function ( err, session ) {
+		log.openSession( [ 'Sesiq', { DirectoryFormat: 'myapp' + FileSession.DirectoryFormat } ], function ( err, session ) {
 
 			test( !err );
 
@@ -116,7 +114,6 @@ UnitestA( 'FileLog.openSession() 2', function ( test ) {
 			test( Fs.existsSync( fn ) );
 			
 			var meta = JSON.parse( Fs.readFileSync( fn, { encoding: 'utf8' } ) );
-			test( meta.ParentSession == 'qwe' );
 
 			// clean everything
 			session.close( function () {
@@ -145,8 +142,10 @@ UnitestA( 'FileSession.addLinkedToken()', function ( test ) {
 			return;
 		}
 
-		// start a session with parent and name
-		log.openSession( '123', [ 'Sesiq', { LinkedTokens: [ 'asd', 'qwe' ] } ], function ( err, session ) {
+		log.openSession( [ 'Sesiq', { LinkedTokens: [ 
+				new LinkedToken( LinkedToken.Type.EXTERNAL, LinkedToken.Relation.SIBLING, 'asd' ),
+				new LinkedToken( LinkedToken.Type.EXTERNAL, LinkedToken.Relation.SIBLING, 'qwe' )
+			] } ], function ( err, session ) {
 
 			test( !err );
 
@@ -155,8 +154,11 @@ UnitestA( 'FileSession.addLinkedToken()', function ( test ) {
 			test( Fs.existsSync( fn ) );
 
 			var meta1 = JSON.parse( Fs.readFileSync( fn, { encoding: 'utf8' } ) );
-			test.eq( meta1.LinkedTokens, [ 'asd', 'qwe' ] );
-			session.addLinkedToken( 'zxc' );
+			test.eq( meta1.LinkedTokens, [
+				{ Type: LinkedToken.Type.EXTERNAL, Relation: LinkedToken.Relation.SIBLING, Value: 'asd' },
+				{ Type: LinkedToken.Type.EXTERNAL, Relation: LinkedToken.Relation.SIBLING, Value: 'qwe' }
+			] );
+			session.addLinkedToken( new LinkedToken( LinkedToken.Type.EXTERNAL, LinkedToken.Relation.SIBLING, 'zxc' ) );
 
 			session.wait( function () {
 
@@ -164,9 +166,12 @@ UnitestA( 'FileSession.addLinkedToken()', function ( test ) {
 				test( meta.Protocol == meta1.Protocol );
 				test( meta.Api == meta1.Api );
 				test( meta.LogSession == meta1.LogSession );
-				test( meta.ParentSession == meta1.ParentSession );
 				test( meta.TimeStamp == meta1.TimeStamp );
-				test.eq( meta.LinkedTokens, [ 'asd', 'qwe', 'zxc' ] );
+				test.eq( meta.LinkedTokens, [
+					{ Type: LinkedToken.Type.EXTERNAL, Relation: LinkedToken.Relation.SIBLING, Value: 'asd' },
+					{ Type: LinkedToken.Type.EXTERNAL, Relation: LinkedToken.Relation.SIBLING, Value: 'qwe' },
+					{ Type: LinkedToken.Type.EXTERNAL, Relation: LinkedToken.Relation.SIBLING, Value: 'zxc' },
+				] );
 
 				// clean everything
 				session.close( function () {
@@ -194,7 +199,7 @@ UnitestA( 'FileSession.wait()', function ( test ) {
 		}
 
 		// start a session
-		log.openSession( null, function ( err, session ) {
+		log.openSession( function ( err, session ) {
 
 			// write one record and check its contents
 			session.write( 'asd qwe', [ 'DATA_TEXT' ], function ( err ) {

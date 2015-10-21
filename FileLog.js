@@ -69,9 +69,9 @@ FileLog.extend( ILogEngine, {
 		return this._dir;
 	},
 
-	openSession: function ( parentId, props, callback ) {
+	openSession: function ( props, callback ) {
 		var _this = this;
-		var session = new FileSession( this, parentId, props, callback );
+		var session = new FileSession( this, props, callback );
 		this._openSessions.push( session );
 		session.on( 'Session.Closed', function () {
 
@@ -105,9 +105,9 @@ FileLog.static( {
 
 	LogSessionClass: FileSession,
 
-	Protocol: '0.12',
+	Protocol: '0.13',
 	Api: 'logging-node',
-	ApiVersion: '0.10',
+	ApiVersion: '0.11',
 
 } );
 

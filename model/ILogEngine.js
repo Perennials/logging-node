@@ -10,7 +10,7 @@ function ILogEngine () {
 ILogEngine.extend( Events.EventEmitter, {
 	getOpenedSessions: function () {},
 	getLoggedSessions: function () {},
-	openSession: function ( parentId, props, callback ) {},
+	openSession: function ( props, callback ) {},
 	wait: function ( callback ) {}
 } );
 

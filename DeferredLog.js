@@ -81,10 +81,10 @@ DeferredLog.extend( ILogEngine, {
 		return [];
 	},
 
-	openSession: function ( parentId, props, callback ) {
+	openSession: function ( props, callback ) {
 		
 		var _this = this;
-		var session = new DeferredSession( this._ctor.LogSessionClass, this, parentId, props, callback );
+		var session = new DeferredSession( this._ctor.LogSessionClass, this, props, callback );
 		if ( this._log ) {
 			session.on( 'Deferred.Open', function () {
 				session.assignLog( _this );

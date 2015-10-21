@@ -2,12 +2,12 @@
 
 var Events = require( 'events' );
 var ILogEngine = require( './ILogEngine' );
+var LinkedToken = require( '../LinkedToken' );
 
-function ILogSession ( log, parentId, props, callback ) {
+function ILogSession ( log, props, callback ) {
 	this._log = log;
 	this._id = null;
 	this._index = null;
-	this._parentId = parentId;
 	this._props = props;
 	this._meta = null;
 }
@@ -30,8 +30,21 @@ ILogSession.extend( Events.EventEmitter, {
 		return this._id;
 	},
 
-	getParentId: function () {
-		return this._parentId;
+	getLinkedToken: function ( type, relation ) {
+		if ( !this._meta ) {
+			return null;
+		}
+		
+		var ret = [];
+		for ( var token of this._meta.LinkedTokens ) {
+			if ( token instanceof LinkedToken && (!type || token.getType() == type) && (!relation || token.getRelation() == relation) ) {
+				ret.push( token );
+			}
+		}
+		if ( ret.length > 0 ) {
+			return ret;
+		}
+		return null;
 	},
 
 	getProps: function () {
@@ -43,7 +56,6 @@ ILogSession.extend( Events.EventEmitter, {
 	getOpenRecords: function () {},
 	getLoggedRecords: function () {},
 	openRecord: function ( props, callback ) {},
-	setParentSession: function ( sessionId ) {},
 	addLinkedToken ( token ) {},
 	wait: function ( callback ) {},
 

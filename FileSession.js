@@ -11,26 +11,14 @@ var FileLog = null;
 
 class FileSession extends ILogSession {
 
-	constructor ( log, parentId, props, callback ) {
+	constructor ( log, props, callback ) {
 
 		// dependencies, ah
 		FileLog = FileLog || require( './FileLog' );
 
-		if ( Object.isObject( parentId ) || parentId instanceof Array ) {
-			callback = props;
-			props = parentId;
-			parentId = null;
-		}
-
-		else if ( props instanceof Function ) {
+		if ( props instanceof Function ) {
 			callback = props;
 			props = {};
-		}
-
-		else if ( parentId instanceof Function ) {
-			callback = parentId;
-			props = {};
-			parentId = null;
 		}
 
 		props = ILogEngine.labelsToProps( props, ILogEngine.DefaultSessionProps );
@@ -56,12 +44,7 @@ class FileSession extends ILogSession {
 			delete props.DirectoryFormat;
 		}
 
-		if ( props.ParentSession ) {
-			parentId = props.ParentSession;
-			delete props.ParentSession;
-		}
-
-		super( log, parentId, props, callback );
+		super( log, props, callback );
 
 		             /// this is not in ILogEngine so not in DeferredLog
 		this._dir = ( log instanceof DeferredLog ? log.getLog().getStorageUri() : log.getStorageUri() );
@@ -75,7 +58,6 @@ class FileSession extends ILogSession {
 			ApiVersion: FileLog.ApiVersion,
 			LogSession: null,
 			Name: sessionName.length > 0 ? sessionName : null,
-			ParentSession: null,
 			LinkedTokens: [],
 			UserData: {},
 			SessionType: props.SessionType || null,
@@ -111,7 +93,6 @@ class FileSession extends ILogSession {
 
 			var meta = _this._meta;
 			meta.LogSession = id;
-			meta.ParentSession = parentId;
 			if ( meta.TimeStamp === null ) {
 				meta.TimeStamp = (new Date()).toISOString();
 			}
@@ -207,12 +188,6 @@ class FileSession extends ILogSession {
 				_this.emit( 'Session.Idle' );
 			}
 		} );
-	}
-
-	setParentSession ( sessionId ) {
-		this._meta.ParentSession = sessionId;
-		this._updateMetaRecord();
-		return this;
 	}
 
 	addLinkedToken ( token ) {

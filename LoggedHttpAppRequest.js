@@ -6,6 +6,7 @@ var WritableLogger  = require( './loggers/WritableLogger' );
 var ConsoleLogger  = require( './loggers/ConsoleLogger' );
 var LoggedHttpApp = null;
 var Stats = require( 'Stats/Stats' );
+var LinkedToken = require( './LinkedToken' );
 
 var _Id = 0;
 var _Reqs = new WeakMap();
@@ -170,14 +171,14 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 				var parentSession = _this.getApp().getLogSession();
 				var parentId = parentSession.getId();
 				if ( parentId ) {
-					parentSession.addLinkedToken( logSession.getId() );
-					logSession.addLinkedToken( parentId );
+					parentSession.addLinkedToken( new LinkedToken( LinkedToken.Type.LOGSESSION, LinkedToken.Relation.CHILD, logSession.getId() ) );
+					logSession.addLinkedToken( new LinkedToken( LinkedToken.Type.LOGSESSION, LinkedToken.Relation.PARENT, parentId ) );
 				}
 				else {
-					parentSession.on( 'Deferred.Flush', function ( err, session ) {
+					parentSession.on( 'Deferred.Flush', function ( err, parentSession ) {
 						if ( !err && logSession ) {
-							session.addLinkedToken( logSession.getId() );
-							logSession.addLinkedToken( session.getId() );
+							parentSession.addLinkedToken( new LinkedToken( LinkedToken.Type.LOGSESSION, LinkedToken.Relation.CHILD, logSession.getId() ) );
+							logSession.addLinkedToken( new LinkedToken( LinkedToken.Type.LOGSESSION, LinkedToken.Relation.PARENT, parentSession.getId() ) );
 						}
 					} )
 				}

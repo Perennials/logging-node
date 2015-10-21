@@ -7,33 +7,20 @@ var Helpers = require( './Helpers' );
 
 class DeferredSession extends ILogSession {
 
-	constructor ( constructor, log, parentId, props, callback ) {
+	constructor ( constructor, log, props, callback ) {
 
-		if ( Object.isObject( parentId ) || parentId instanceof Array ) {
-			callback = props;
-			props = parentId;
-			parentId = null;
-		}
-
-		else if ( props instanceof Function ) {
+		if ( props instanceof Function ) {
 			callback = props;
 			props = {};
 		}
 
-		else if ( parentId instanceof Function ) {
-			callback = parentId;
-			props = {};
-			parentId = null;
-		}
-
-		super( log, parentId, props, callback );
+		super( log, props, callback );
 
 		this.setMaxListeners( 0 );
 
 		this._session = null;
 		this._ctor = constructor;
 		this._ctorLog = log;
-		this._ctorParentId = parentId;
 		this._ctorProps = props;
 		this._ctorCallback = callback;
 		this._deferredRecords = [];
@@ -70,7 +57,7 @@ class DeferredSession extends ILogSession {
 
 		var _this = this;
 		var ctor = _this._ctor;
-		var session = new ctor( this._ctorLog, this._ctorParentId, this._ctorProps, this._ctorCallback );
+		var session = new ctor( this._ctorLog, this._ctorProps, this._ctorCallback );
 		session.on( 'Session.Opened', function ( err, session ) {
 
 			if ( err ) {
@@ -145,14 +132,6 @@ class DeferredSession extends ILogSession {
 		return null;
 	}
 
-	getParentId () {
-		var obj = this._session;
-		if ( obj ) {
-			return obj.getParentId();
-		}
-		return null;
-	}
-
 	getStorageUri () {
 		var obj = this._session;
 		if ( obj ) {
@@ -175,16 +154,6 @@ class DeferredSession extends ILogSession {
 			return obj.getLoggedRecords();
 		}
 		return [];
-	}
-
-	setParentSession ( sesionId ) {
-		if ( this._session ) {
-			this._session.setParentSession( sesionId );
-		}
-		else {
-			this._ctorParentId = sesionId;
-		}
-		return this;
 	}
 
 	addLinkedToken ( token ) {

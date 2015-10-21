@@ -50,14 +50,12 @@ The implementation is in `BETA` stage.
 			- [.getLog()](#getlog-1)
 			- [.getMeta()](#getmeta)
 			- [.getId()](#getid)
-			- [.getParentId()](#getparentid)
 			- [.getProps()](#getprops)
 			- [.getStorageUri()](#getstorageuri-1)
 			- [.getOpenRecords()](#getopenrecords)
 			- [.getLoggedRecords()](#getloggedrecords)
 			- [.addLinkedToken()](#addlinkedtoken)
 			- [.setUserData()](#setuserdata)
-			- [.setParentSession()](#setparentsession)
 			- [.write()](#write)
 			- [.wait()](#wait-1)
 			- [.close()](#close)
@@ -67,8 +65,15 @@ The implementation is in `BETA` stage.
 			- ['Session.Meta.Error'](#sessionmetaerror)
 			- ['Session.Idle'](#sessionidle)
 			- ['Session.Closed'](#sessionclosed)
+	- [LinkedToken](#linkedtoken)
+	- [Constants](#constants)
+	- [Methods](#methods-4)
+		- [Constructor](#constructor-3)
+		- [.getType()](#gettype)
+		- [.getRelation()](#getrelation)
+		- [.getValue()](#getvalue)
 	- [FileRecord](#filerecord)
-		- [Methods](#methods-4)
+		- [Methods](#methods-5)
 			- [.write()](#write-1)
 			- [.getId()](#getid-1)
 			- [.getUri()](#geturi)
@@ -617,12 +622,10 @@ new FileLog(
 Creates a new FileSession. It will be created as a subdirectory in the
 location specified for the LogLog. The naming of the directory is determined
 by the property `DirectoryFormat`, or fall back to the default in
-`FileSession.DirectoryFormat`. If a property `ParentSession` is found it
-will be used instead of `parentId`. 
+`FileSession.DirectoryFormat`.
 
 ```js
 .openSession(
-	parentId:String|null|undefined,
 	props:(Object|String)[]|Object|undefined,
 	callback:function( err:Error|null, session:FileSession )|undefined
 ) : FileSession;
@@ -631,7 +634,6 @@ will be used instead of `parentId`.
 Argument | Description
 :------- | :----------
 `props` | A [list of properties or labels](#session-and-record-properties) for the session.
-`parentId` | An id of the parent log session, if any.
 `callback` | A function to be notified when the session is opened and ready for use (or when an error prevented this from happening). Since a meta record will be created upon opening the session, the callback will be invoked after the record is created and if it fails the `err` argument will be populated but the `session` will be open and valid.
 
 
@@ -720,14 +722,12 @@ var FileSession = require( 'Logging/FileSession' );
 - [.getLog()](#getlog-1)
 - [.getMeta()](#getmeta)
 - [.getId()](#getid)
-- [.getParentId()](#getparentid)
 - [.getProps()](#getprops)
 - [.getStorageUri()](#getstorageuri-1)
 - [.getOpenRecords()](#getopenrecords)
 - [.getLoggedRecords()](#getloggedrecords)
 - [.addLinkedToken()](#addlinkedtoken)
 - [.setUserData()](#setuserdata)
-- [.setParentSession()](#setparentsession)
 - [.write()](#write)
 - [.wait()](#wait-1)
 - [.close()](#close)
@@ -773,14 +773,6 @@ Retrieves the id of the session. The id is the same as the directory name.
 ```
 
 
-##### .getParentId()
-Retrieves the parent session id, if any.
-
-```js
-.getParentId() : String|null;
-```
-
-
 ##### .getProps()
 Retrieves the properties that describe the session.
 
@@ -817,7 +809,7 @@ Associates a token with the log session.
 
 ```js
 .addLinkedToken(
-	token:String
+	token:LinkedToken
 ) : this;
 ```
 
@@ -835,15 +827,6 @@ Accepts either key and value or a mapping of keys and values.
 ```js
 .setUserData(
 	data:Object
-) : this;
-```
-
-##### .setParentSession()
-Associates a parent session id with the log session.
-
-```js
-.setParentSession(
-	session:String
 ) : this;
 ```
 
@@ -960,6 +943,58 @@ function (
 );
 ```
 
+### LinkedToken
+Used to link the session to other sessions.
+
+```js
+var LinkedToken = require( 'Logging/LinkedToken' );
+```
+
+### Constants
+
+Types:
+
+- `LinkedToken.Type.LOGSESSSION`
+- `LinkedToken.Type.EXTERNAL`
+
+Relations:
+
+- `LinkedToken.Relation.PARENT`
+- `LinkedToken.Relation.CHILD`
+- `LinkedToken.Relation.SIBLING`
+
+### Methods
+
+#### Constructor
+
+```js
+new LinkedToken(
+	type:LinkedToken.Type,
+	relation:LinkedToken.Relation,
+	value:String
+);
+```
+
+#### .getType()
+Retrieves the type of the token.
+
+```js
+.getType() : LinkedToken.Type;
+```
+
+#### .getRelation()
+Retrieves the relation of the token to the session.
+
+```js
+.getRelation() : LinkedToken.Relation;
+```
+
+#### .getValue()
+Retrieves the value of the token.
+
+```js
+.getValue() : String;
+```
 
 ### FileRecord
 This class is part of the low-level API and normally shouldn't be used
