@@ -21,7 +21,7 @@ class DeferredSession extends ILogSession {
 		this._session = null;
 		this._ctor = constructor;
 		this._ctorLog = log;
-		this._ctorProps = props;
+		this._ctorProps = props ? props.duplicate() : props;
 		this._ctorCallback = callback;
 		this._deferredRecords = [];
 		this._tokens = [];
