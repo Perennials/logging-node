@@ -1,17 +1,37 @@
-Logs structure (v0.12)
+Logs structure (v0.13)
 ----------------------
 
-Logs are saved in a very generic structure which allows saving any type of data and creating custom conventions for the need of the applications. There are only two units in this structure - **log sessions** and **log records**.
+Logs are saved in a very generic structure which allows saving any type of
+data and creating custom conventions for the need of the applications. There
+are only two units in this structure - **log sessions** and **log records**.
 
 ![Diagram](/specs/log-structure.png?raw=true)
 
 ### Sessions
-A **log session** is a logical group of **log records**. Usually it corresponds to a request to the server. So one request equals one log session. Log sessions can be linked together in parent-child relationship. This way different requests, for different purpose, made at different time, possibly to different applications, can be linked together. For example the client can initiate a search and start a log session, it then sends the **log session id** to the backend together with the search request. The backend starts a new log session which is a child to the log session started by the client. The backend can make new requests to other components with their own log sessions and be their parent session. The next day maybe a booking is performed which is again linked to the appropriate parent log session. This way all logs of a logical workflow can be grouped together and tracked. The session is also assigned a list of properties as key-value pairs used to describe the session so the Log Analyser can properly work with it. The key-value properties can be used to create conventions for the need of the applications. Bellow a list of predefined keys and values is given, which the Log Analyser and the Log UI are able to recognise in the context of Perennial's field of work.
+A **log session** is a logical group of **log records**. Usually it
+corresponds to a request to the server. So one request equals one log session.
+Log sessions can be linked together in parent-child or sibling-sibling
+relationship. This way different requests, for different purpose, made at
+different time, possibly to different applications, can be linked together.
+For example the client can initiate a search and start a log session, it then
+sends the **log session id** to the backend together with the search request.
+The backend starts a new log session which is a child to the log session
+started by the client. The backend can make new requests to other components
+with their own log sessions and be their parent session. The next day maybe a
+booking is performed which is again linked to the appropriate parent log
+session. This way all logs of a logical workflow can be grouped together and
+tracked. The session is also assigned a list of properties as key-value pairs
+used to describe the session so the Log Analyser can properly work with it.
+The key-value properties can be used to create conventions for the need of the
+applications. Bellow a list of predefined keys and values is given, which the
+Log Analyser and the Log UI are able to recognise in the context of
+Perennial's field of work.
 
 #### Predefined log session properties
 
 ##### Name
-An optional name for the log session. Can be used by the developers in order to distinguish their sessions.
+An optional name for the log session. Can be used by the developers in order
+to distinguish their sessions.
 
 - Type: `string`
 - Values: [a-zA-Z0-9_]
@@ -28,24 +48,52 @@ Describes the logical type of the sesion.
     run. In other words logs that are outside the context of a server request.
 
 ##### LinkedTokens
-One or more tokens that represent links to other log sessions. Sometimes sessions can not be linked via parent-child relationship because of different reasons. Log sessions having the same token are linked together, meaning they belong to the same flow and should be treated as part of the same log session tree. It is outside the scope of this document to define how to ensure that the tokens will remain unique to the application that generated them.
+One or more tokens that represent links to other log sessions. Sometimes
+sessions can not be linked via parent-child relationship because of different
+reasons. Log sessions having the same "EXTERNAL" token are linked together,
+meaning they belong to the same flow and should be treated as part of the same
+log session tree. It is outside the scope of this document to define how to
+ensure that the "EXTERNAL" tokens will remain unique to the application that
+generated them.
 
-- Type: `string[]`
+- Type: `LinkedToken[]`
+  
+  ```js
+  {
+      Type: "LOGSESSION|EXTERNAL",
+      Relation: "PARENT|CHILD|SIBLING",
+      Value: "<string>"
+  }
+  ```
+
+  Property | Description
+  -------- | --------
+  `Type` | The type of the token. "LOGSESSION" means the token represents the id of another log session. "EXTERNAL" means the token value is an arbitrary string that is not a log session id. To be linked together multiple sessions must specify the same external token. **At this time "EXTERNAL" tokens must be linked via "SIBLING" relation.**
+  `Relation` | Describes the relation of the token to this session. E.g. "PARENT" means the token is a parent to this session.
+  `Token` | The token string itself.
 - Values: any
 
 ##### UserData
-A mapping where the key is a string and the value is any valid JSON value. Can be used to store custom data and construct custom conventions.
+A mapping where the key is a string and the value is any valid JSON value. Can
+be used to store custom data and construct custom conventions.
 
 - Type: `mapping`
 - Values: any
 
 ### Records
-A **log session** can hold multiple **log records**. Log records has unique **log record id** within the session. They hold some kind of data (XML, JSON, etc.), and a list of properties as key-value pairs used to describe the record so the log analyser can properly work with it. The key-value properties can be used to create conventions for the need of the applications. Bellow a list of predefined keys and values is given, which the Log Analyser and the Log UI are able to recognise in the context of Perennial's field of work.
+A **log session** can hold multiple **log records**. Log records has unique
+**log record id** within the session. They hold some kind of data (XML, JSON,
+etc.), and a list of properties as key-value pairs used to describe the record
+so the log analyser can properly work with it. The key-value properties can be
+used to create conventions for the need of the applications. Bellow a list of
+predefined keys and values is given, which the Log Analyser and the Log UI are
+able to recognise in the context of Perennial's field of work.
 
 #### Predefined log record properties
 
 ##### Name
-An optional name for the log record. Can be used by the developers in order to distinguish their records.
+An optional name for the log record. Can be used by the developers in order to
+distinguish their records.
 
 - Type: `string`
 - Values: [a-zA-Z0-9_]
@@ -54,7 +102,10 @@ An optional name for the log record. Can be used by the developers in order to d
 Describes the data held by the log record.
 
 - Type: `string`
-- Values: The table lists the known data types and corresponding file extensions used for these types by the file backend, and also the MIME types corresponding to these types used when the data type is to be inferred automatically.
+- Values: The table lists the known data types and corresponding file
+  extensions used for these types by the file backend, and also the MIME types
+  corresponding to these types used when the data type is to be inferred
+  automatically.
 
 Value | File extension | MIME type(s)
 ----- | -------------- | ------------
@@ -94,11 +145,8 @@ Describes the logical type of the record.
         // Log session name,
         Name: "<string>|null",
     
-        // Parent log session id.
-        ParentSession: "<string>|null",
-    
         // Tokens that associate this log session with other log sessions.
-        LinkedTokens: "<string>[]",
+        LinkedTokens: "<LinkedToken>[]",
     
         // Logical type of the session.
         SessionType: "<string>|null",
@@ -137,26 +185,33 @@ File backend
 ------------
 
 ### Directory structure
-Each log session is stored in its own directory and all log records live as files within this directory.
+Each log session is stored in its own directory and all log records live as
+files within this directory.
 
 ```
 /app/store/log/{LogSession}/{LogRecords}...
 ```
 
-The name of the log session is composed of the app name and app instance identifier, unique id and optional session name.
+The name of the log session is composed of the app name and app instance
+identifier, unique id and optional session name.
 
 ```
 /app/store/log/{Id}-{Name}-{App}.{Version}-{Instance}/...
 ```
 
 ### File stucture
-The name of the log records is composed of a sequential record number, the record type, optional name and file extension based on the data type (e.g. JSON = .json, TEXT = .txt).
+The name of the log records is composed of a sequential record number, the
+record type, optional name and file extension based on the data type (e.g.
+JSON = .json, TEXT = .txt).
 
 ```
 /app/store/log/jisd83k9--ws2.10-1/{N}-{RecordType}-{Name}.{DataType}
 ```
 
-When the session is created together with it a META record is created. All other records are optional. A missing CLOSE record indicates either the session is still open, or the session was not closed properly, or the application crashed without being able to close the session.
+When the session is created together with it a META record is created. All
+other records are optional. A missing CLOSE record indicates either the
+session is still open, or the session was not closed properly, or the
+application crashed without being able to close the session.
 
 ```
 /app/store/log/jisd83k9--ws2.10-1/1-META-.json
