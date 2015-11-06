@@ -65,7 +65,7 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 		this._stats.addStat( 'Requests.Finished', 1 );
 
 		var name = 'Request.' + ( rqprops.Name || GetRqId( rq ).toString() ) + '.Succeeded';
-		var good = this.isResponseOk( rs, err );
+		var good = this._isResponseOk( rs, err );
 		if ( good ) {
 			this._stats.addStat( 'Requests.Succeeded', 1 );
 		}
@@ -75,7 +75,7 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 		this._stats.setStat( name, good );
 	}
 
-	isResponseOk ( rs, err ) {
+	_isResponseOk ( rs, err ) {
 		return !(err instanceof Error) && rs.statusCode >= 200 && rs.statusCode < 400;
 	}
 
