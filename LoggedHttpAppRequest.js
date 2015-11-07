@@ -61,7 +61,6 @@ class LoggedHttpAppRequest extends HttpAppRequest {
 
 		var name = rqprops.Name || GetRqId( rq ).toString();
 		var t = this._stats.saveTimer( rq, 'Request.' + name + '.Timing' );
-		this._stats.addStat( 'Timing.Requests', t, 'ms' );
 		this._stats.addStat( 'Requests.Finished', 1 );
 
 		var name = 'Request.' + ( rqprops.Name || GetRqId( rq ).toString() ) + '.Succeeded';
