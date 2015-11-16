@@ -212,9 +212,9 @@ class LoggedHttpApp extends HttpApp {
 				env: process.env,
 				title: process.title,
 				pid: process.pid,
-				gid: process.getgid(),
-				uid: process.getuid(),
-				groups: process.getgroups(),
+				gid: process.getgid ? process.getgid() : null,
+				uid: process.getuid ? process.getuid() : null,
+				groups: process.getgroups ? process.getgroups() : null,
 				umask: process.umask()
 			},
 			node: {
